@@ -104,7 +104,7 @@
             }
           } else if (scanStep === 'package' && currentOrder) {
             if (scannedValue === currentOrder.packageNumber) {
-              confirmSound.current?.play(); // Confirm-Ton nach Paketnummer
+              confirmSound.current?.play(); // Confirm-Ton NUR nach Paketnummer
               setCompletedOrders(prev => new Set(prev).add(currentOrder.orderId));
               setCurrentOrder(null);
               setScanStep('order');
@@ -325,7 +325,7 @@
             }
           } else if (scanStep === 'package' && currentOrder) {
             if (scannedValue === currentOrder.packageNumber) {
-              confirmSound.current?.play(); // Confirm-Ton nach Paketnummer
+              confirmSound.current?.play(); // Confirm-Ton NUR nach Paketnummer
               setCompletedOrders(prev => new Set(prev).add(currentOrder.orderId));
               setCurrentOrder(null);
               setScanStep('order');
