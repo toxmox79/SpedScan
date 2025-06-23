@@ -89,17 +89,14 @@
             if (order && !completedOrders.has(scannedValue)) {
               setCurrentOrder(order);
               setScanStep('barcode');
-              // Hier: Statt positiveSound, jetzt den doppelten positiven Ton (wie bei Paketnummer)
-              positiveSound.current?.play();
-              setTimeout(() => positiveSound.current?.play(), 300);
+              positiveSound.current?.play(); // Positiver Ton nach Order.id
             } else {
               negativeSound.current?.play();
             }
           } else if (scanStep === 'barcode' && currentOrder) {
             if (scannedValue === currentOrder.barcode) {
               setScanStep('package');
-              // Unverändert: einfacher positiver Ton
-              positiveSound.current?.play();
+              positiveSound.current?.play(); // Positiver Ton nach Barcode
             } else {
               negativeSound.current?.play();
               setScanStep('order');
@@ -107,8 +104,7 @@
             }
           } else if (scanStep === 'package' && currentOrder) {
             if (scannedValue === currentOrder.packageNumber) {
-              // Hier: Statt doppeltem positiven Ton, jetzt nur noch einmal confirmSound
-              confirmSound.current?.play();
+              confirmSound.current?.play(); // Confirm-Ton nach Paketnummer
               setCompletedOrders(prev => new Set(prev).add(currentOrder.orderId));
               setCurrentOrder(null);
               setScanStep('order');
@@ -314,14 +310,14 @@
             if (order && !completedOrders.has(scannedValue)) {
               setCurrentOrder(order);
               setScanStep('barcode');
-              confirmSound.current?.play(); // Positiver Ton für Order.id
+              positiveSound.current?.play(); // Positiver Ton nach Order.id
             } else {
-              negativeSound.current?.play(); // Negativer Ton bei Fehler
+              negativeSound.current?.play();
             }
           } else if (scanStep === 'barcode' && currentOrder) {
             if (scannedValue === currentOrder.barcode) {
               setScanStep('package');
-              positiveSound.current?.play(); // Positiver Ton für Barcode
+              positiveSound.current?.play(); // Positiver Ton nach Barcode
             } else {
               negativeSound.current?.play();
               setScanStep('order');
@@ -329,8 +325,7 @@
             }
           } else if (scanStep === 'package' && currentOrder) {
             if (scannedValue === currentOrder.packageNumber) {
-              positiveSound.current?.play();
-              setTimeout(() => positiveSound.current?.play(), 300); // Doppelter Ton für Paketnummer
+              confirmSound.current?.play(); // Confirm-Ton nach Paketnummer
               setCompletedOrders(prev => new Set(prev).add(currentOrder.orderId));
               setCurrentOrder(null);
               setScanStep('order');
