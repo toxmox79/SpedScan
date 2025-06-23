@@ -1,6 +1,6 @@
 {
-  "name": "GEL Scanner",
-  "short_name": "Scanner",
+  "name": "SpedScan",
+  "short_name": "SpedScan",
   "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
