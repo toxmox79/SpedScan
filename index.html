@@ -89,9 +89,9 @@
             if (order && !completedOrders.has(scannedValue)) {
               setCurrentOrder(order);
               setScanStep('barcode');
-              confirmSound.current?.play(); // Positiver Ton für Order.id
+              positiveSound.current?.play(); // Jetzt positiver Ton für Order.id
             } else {
-              negativeSound.current?.play(); // Negativer Ton bei Fehler
+              negativeSound.current?.play();
             }
           } else if (scanStep === 'barcode' && currentOrder) {
             if (scannedValue === currentOrder.barcode) {
