@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Order Scanner</title>
+
+  <!-- Bibliotheken -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+  <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#93c01f" />
+</head>
+<body class="bg-gray-100 font-sans">
+  <div id="root"></div>
+
+  <script type="text/babel">
+    function App() {
+      const [orders, setOrders] = React.useState([]);
+      const [currentScan, setCurrentScan] = React.useState('');
+      const [currentOrder, setCurrentOrder] = React.useState(null);
+      const [scanStep, setScanStep] = React.useState('order');
+      const [completedOrders, setCompletedOrders] = React.useState(new Set());
+      const inputRef = React.useRef(null);
+
+      const positiveSound = React.useRef(null);
+      const negativeSound = React.useRef(null);
+      const confirmSound = React.useRef(null);
+
+      // Initialisiere Sounds nach erster Benutzerinteraktion
+      React.useEffect(() => {
+        const enableAudio = () => {
+          positiveSound.current = new Audio('https://cdn.pixabay.com/download/audio/2022/03/15/audio_9b7b08b3e7.mp3?filename=correct-6033.mp3');
+          negativeSound.current = new Audio('https://cdn.pixabay.com/download/audio/2022/03/15/audio_7b8c3e0b3e.mp3?filename=wrong-47985.mp3');
+          confirmSound.current = new Audio('https://cdn.pixabay.com/download/audio/2022/03/15/audio_8c3e0b3e7b.mp3?filename=beep-43076.mp3');
+          positiveSound.current.play().catch(() => {});
+          document.removeEventListener('click', enableAudio);
+        };
+        document.addEventListener('click', enableAudio);
+        return () => document.removeEventListener('click', enableAudio);
+      }, []);
+
+      const handleFileUpload = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          Papa.parse(file, {
+            header: true,
+            skipEmptyLines: true,
+            transformHeader: (header) => header.trim().replace(/^"|"$/g, ''),
+            transform: (value) => value.trim().replace(/^"|"$/g, ''),
+            complete: (results) => {
+              const seenOrders = new Set();
+              const cleanedData = results.data
+                .filter(row => row['VariationBarcode.code'] && row['Order.id'])
+                .map(row => ({
+                  orderId: row['Order.id'],
+                  barcode: row['VariationBarcode.code'],
+                  packageNumber: row['ShippingPackages.packageNumber']?.startsWith('3')
+                    ? row['ShippingPackages.packageNumber'].replace(/^3/, '003')
+                    : row['ShippingPackages.packageNumber'],
+                  firstName: row['DeliveryAddress.firstName'],
+                  lastName: row['DeliveryAddress.lastName']
+                }))
+                .filter(row => {
+                  if (seenOrders.has(row.orderId)) return false;
+                  seenOrders.add(row.orderId);
+                  return true;
+                });
+              setOrders(cleanedData);
+            },
+            error: (err) => console.error(err)
+          });
+        }
+      };
+
+      const handleScan = (e) => {
+        if (e.key === 'Enter') {
+          const scannedValue = currentScan.trim();
+          if (!scannedValue) return;
+
+          if (scanStep === 'order') {
+            const order = orders.find(o => o.orderId === scannedValue);
+            if (order && !completedOrders.has(scannedValue)) {
+              setCurrentOrder(order);
+              setScanStep('barcode');
+              confirmSound.current?.play();
+            } else {
+              negativeSound.current?.play();
+            }
+          } else if (scanStep === 'barcode' && currentOrder) {
+            if (scannedValue === currentOrder.barcode) {
+              setScanStep('package');
+              positiveSound.current?.play();
+            } else {
+              negativeSound.current?.play();
+              setScanStep('order');
+              setCurrentOrder(null);
+            }
+          } else if (scanStep === 'package' && currentOrder) {
+            if (scannedValue === currentOrder.packageNumber) {
+              positiveSound.current?.play();
+              setTimeout(() => positiveSound.current?.play(), 300);
+              setCompletedOrders(prev => new Set(prev).add(currentOrder.orderId));
+              setCurrentOrder(null);
+              setScanStep('order');
+            } else {
+              negativeSound.current?.play();
+              setScanStep('order');
+              setCurrentOrder(null);
+            }
+          }
+
+          setCurrentScan('');
+        }
+      };
+
+      React.useEffect(() => {
+        if (inputRef.current) inputRef.current.focus();
+      }, [currentOrder, scanStep]);
+
+      return (
+        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-6">
+            {/* File Upload */}
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                CSV-Datei hochladen
+              </label>
+              <input
+                type="file"
+                accept=".csv"
+                onChange={handleFileUpload}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#93c01f] file:text-white hover:file:bg-[#7aa018]"
+              />
+            </div>
+
+            {/* Scan Input */}
+            <div className="mb-6">
+              <input
+                ref={inputRef}
+                type="text"
+                value={currentScan}
+                onChange={(e) => setCurrentScan(e.target.value)}
+                onKeyPress={handleScan}
+                placeholder={`Scanne ${scanStep === 'order' ? 'Order ID' : scanStep === 'barcode' ? 'Barcode' : 'Paketnummer'}`}
+                className="w-full px-4 py-3 rounded-lg bg-gray-100 border-none focus:ring-2 focus:ring-[#93c01f] text-lg placeholder-gray-400"
+              />
+            </div>
+
+            {/* Current Order */}
+            {currentOrder && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h2 className="text-lg font-semibold text-gray-800">Auftrag #{currentOrder.orderId}</h2>
+                <p className="text-sm text-gray-600">{currentOrder.firstName} {currentOrder.lastName}</p>
+                <p className="text-sm text-gray-600">Barcode: {currentOrder.barcode}</p>
+                <p className="text-sm text-gray-600">Paket: {currentOrder.packageNumber}</p>
+              </div>
+            )}
+
+            {/* Order Table */}
+            <div className="max-h-96 overflow-y-auto">
+              {orders.length > 0 && (
+                <table className="w-full text-sm text-left text-gray-500">
+                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
+                    <tr>
+                      <th className="px-4 py-3">Order ID</th>
+                      <th className="px-4 py-3">Barcode</th>
+                      <th className="px-4 py-3">Paketnummer</th>
+                      <th className="px-4 py-3">Vorname</th>
+                      <th className="px-4 py-3">Nachname</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {orders.map((order, index) => (
+                      <tr key={index}
+                        className={`border-b transition-all duration-200
+                          ${completedOrders.has(order.orderId)
+                            ? 'bg-[#93c01f] text-white'
+                            : currentOrder?.orderId === order.orderId
+                            ? 'bg-[#93c01f]/10 border-2 border-[#93c01f]'
+                            : 'bg-white hover:bg-gray-50'}`}>
+                        <td className="px-4 py-3">{order.orderId}</td>
+                        <td className="px-4 py-3">{order.barcode}</td>
+                        <td className="px-4 py-3">{order.packageNumber}</td>
+                        <td className="px-4 py-3">{order.firstName}</td>
+                        <td className="px-4 py-3">{order.lastName}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+
+  <!-- Service Worker Registrierung -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('service-worker.js')
+        .then(() => console.log('Service Worker registered'))
+        .catch(err => console.error('Service Worker registration failed:', err));
+    }
+  </script>
+</body>
+</html>
