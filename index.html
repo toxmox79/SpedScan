@@ -84,15 +84,15 @@
           const scannedValue = currentScan.trim();
           if (!scannedValue) return;
 
-          // Filter: Ignoriere beliebige Zahlen am Ende
-          if (!isNaN(scannedValue) && scannedValue.length > 6 && scanStep !== 'order') {
-            setCurrentScan('');
-            return;
-          }
-
           if (scanStep === 'order') {
-            const scannedOrderId = currentScan.trim();
-            const checkOrderId = scannedOrderId.startsWith('100000') ? scannedOrderId.slice(6) : scannedOrderId;
+            // Entferne Präfix 100000 und die letzte Ziffer
+            let checkOrderId = scannedValue;
+            if (checkOrderId.startsWith('100000')) {
+              checkOrderId = checkOrderId.slice(6);
+            }
+            if (checkOrderId.length > 1) {
+              checkOrderId = checkOrderId.slice(0, -1);
+            }
             const order = orders.find(o => o.orderId === checkOrderId);
             if (order && !completedOrders.has(order.orderId)) {
               setCurrentOrder(order);
@@ -313,21 +313,26 @@
           if (!scannedValue) return;
 
           if (scanStep === 'order') {
-            // Hier: OrderID mit 100000 voranstellen
-            const scannedOrderId = currentScan.trim();
-            const checkOrderId = scannedOrderId.startsWith('100000') ? scannedOrderId.slice(6) : scannedOrderId;
+            // Entferne Präfix 100000 und die letzte Ziffer
+            let checkOrderId = scannedValue;
+            if (checkOrderId.startsWith('100000')) {
+              checkOrderId = checkOrderId.slice(6);
+            }
+            if (checkOrderId.length > 1) {
+              checkOrderId = checkOrderId.slice(0, -1);
+            }
             const order = orders.find(o => o.orderId === checkOrderId);
             if (order && !completedOrders.has(order.orderId)) {
               setCurrentOrder(order);
               setScanStep('barcode');
-              positiveSound.current?.play(); // Positiver Ton nach Order.id
+              positiveSound.current?.play();
             } else {
               negativeSound.current?.play();
             }
           } else if (scanStep === 'barcode' && currentOrder) {
             if (scannedValue === currentOrder.barcode) {
               setScanStep('package');
-              positiveSound.current?.play(); // Positiver Ton nach Barcode
+              positiveSound.current?.play();
             } else {
               negativeSound.current?.play();
               setScanStep('order');
@@ -335,7 +340,7 @@
             }
           } else if (scanStep === 'package' && currentOrder) {
             if (scannedValue === currentOrder.packageNumber) {
-              confirmSound.current?.play(); // Confirm-Ton NUR nach Paketnummer
+              confirmSound.current?.play();
               setCompletedOrders(prev => new Set(prev).add(currentOrder.orderId));
               setCurrentOrder(null);
               setScanStep('order');
@@ -345,7 +350,6 @@
               setCurrentOrder(null);
             }
           }
-
           setCurrentScan('');
         }
       };
