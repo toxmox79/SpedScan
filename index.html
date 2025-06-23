@@ -85,11 +85,14 @@
           if (!scannedValue) return;
 
           if (scanStep === 'order') {
-            const order = orders.find(o => o.orderId === scannedValue);
-            if (order && !completedOrders.has(scannedValue)) {
+            // Hier: OrderID mit 100000 voranstellen
+            const scannedOrderId = currentScan.trim();
+            const checkOrderId = scannedOrderId.startsWith('100000') ? scannedOrderId.slice(6) : scannedOrderId;
+            const order = orders.find(o => o.orderId === checkOrderId);
+            if (order && !completedOrders.has(order.orderId)) {
               setCurrentOrder(order);
               setScanStep('barcode');
-              positiveSound.current?.play(); // Positiver Ton nach Order.id
+              positiveSound.current?.play();
             } else {
               negativeSound.current?.play();
             }
