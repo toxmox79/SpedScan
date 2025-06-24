@@ -85,14 +85,13 @@
           if (!scannedValue) return;
 
           if (scanStep === 'order') {
-            // Entferne Präfix 100000 und die letzte Ziffer
             let checkOrderId = scannedValue;
-            if (checkOrderId.startsWith('100000')) {
-              checkOrderId = checkOrderId.slice(6);
+            // Prüfen, ob der Scan mit "100000" beginnt und lang genug ist
+            if (checkOrderId.startsWith('100000') && checkOrderId.length > 7) {
+              // Entferne die ersten 6 Zeichen und das letzte Zeichen
+              checkOrderId = checkOrderId.substring(6, checkOrderId.length - 1);
             }
-            if (checkOrderId.length > 1) {
-              checkOrderId = checkOrderId.slice(0, -1);
-            }
+
             const order = orders.find(o => o.orderId === checkOrderId);
             if (order && !completedOrders.has(order.orderId)) {
               setCurrentOrder(order);
@@ -313,14 +312,13 @@
           if (!scannedValue) return;
 
           if (scanStep === 'order') {
-            // Entferne Präfix 100000 und die letzte Ziffer
             let checkOrderId = scannedValue;
-            if (checkOrderId.startsWith('100000')) {
-              checkOrderId = checkOrderId.slice(6);
+            // Prüfen, ob der Scan mit "100000" beginnt und lang genug ist
+            if (checkOrderId.startsWith('100000') && checkOrderId.length > 7) {
+              // Entferne die ersten 6 Zeichen und das letzte Zeichen
+              checkOrderId = checkOrderId.substring(6, checkOrderId.length - 1);
             }
-            if (checkOrderId.length > 1) {
-              checkOrderId = checkOrderId.slice(0, -1);
-            }
+
             const order = orders.find(o => o.orderId === checkOrderId);
             if (order && !completedOrders.has(order.orderId)) {
               setCurrentOrder(order);
