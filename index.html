@@ -55,6 +55,7 @@
             transformHeader: (header) => header.trim().replace(/^"|"$/g, ''),
             transform: (value) => value.trim().replace(/^"|"$/g, ''),
             complete: (results) => {
+              console.log('Parsed CSV Data:', results.data); // For debugging
               const seenOrders = new Set();
               const cleanedData = results.data
                 .filter(row => row['VariationBarcode.code'] && row['Order.id'])
