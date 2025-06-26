@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Speditions Scanner</title>
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="./manifest.json">
   <style>
     body {
       background-color: #f5f5f7;
@@ -138,9 +138,9 @@
     const root = createRoot(document.getElementById('root'));
 
     // Defining audio files for feedback
-    const positiveSound = new Audio('/sounds/positive.mp3');
-    const negativeSound = new Audio('/sounds/negative.mp3');
-    const confirmSound = new Audio('/sounds/confirm.mp3');
+    const positiveSound = new Audio('./sounds/positive.mp3'); // Changed to relative path
+    const negativeSound = new Audio('./sounds/negative.mp3'); // Changed to relative path
+    const confirmSound = new Audio('./sounds/confirm.mp3');   // Changed to relative path
 
     // Defining the main App component
     function App() {
@@ -328,7 +328,8 @@
     // Register the service worker
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
+        // Registering with a relative path will automatically set the scope correctly for project pages
+        navigator.serviceWorker.register('./service-worker.js')
           .then(registration => {
             console.log('ServiceWorker registration successful with scope: ', registration.scope);
           })
