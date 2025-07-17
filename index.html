@@ -147,18 +147,19 @@
         const { useState, useEffect, useRef } = React;
 
         function App() {
-            const [data, setData] = useState([]);
+            const [data, setData] = useState([]); // Original parsed CSV data
+            const [normalizedData, setNormalizedData] = useState([]); // Flattened data for easier lookup
             const [fileName, setFileName] = useState('');
             const [scanMode, setScanMode] = useState('package'); // 'package' or 'barcode'
-            const [currentScan, setCurrentScan] = useState(null); // { packageNumber, expectedBarcodes: [], scannedBarcodes: Set, name, itemName, rowIndicesForPackage: [] }
-            const [matchedRows, setMatchedRows] = useState(new Set()); // Stores row indices of matched items
+            // currentScan: { packageNumber: string, expectedBarcodes: [{ ean: string, originalRowIndex: number }], scannedItems: Set<string (JSON.stringified { originalRowIndex, ean })>, name: string, itemName: string }
+            const [currentScan, setCurrentScan] = useState(null); 
+            const [matchedRows, setMatchedRows] = useState(new Set()); // Stores original row indices that have *any* matched EAN
             const [error, setError] = useState(null);
             const inputRef = useRef(null);
 
             const positiveSound = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
             const negativeSound = new Audio('https://www.soundjay.com/buttons/sounds/button-9.mp3');
             const confirmSound = new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3');
-
 
             useEffect(() => {
                 if (inputRef.current) {
@@ -180,6 +181,45 @@
                 });
             };
 
+            // New function to normalize data
+            const normalizeData = (originalData) => {
+                const flatData = [];
+                originalData.forEach((row, originalRowIndex) => {
+                    const packageNumbers = row['ShippingPackages.packageNumber'] ? row['ShippingPackages.packageNumber'].split(',').map(pn => pn.trim()) : [];
+                    const variationBarcodes = row['VariationBarcode.code'] ? row['VariationBarcode.code'].split(',').map(bc => bc.trim()) : [];
+
+                    // Assuming a 1:1 correspondence for multiple package numbers and barcodes in a single row
+                    // If a row has N package numbers and M barcodes, it will create min(N,M) entries.
+                    // If N != M, this logic needs to be refined based on actual data structure/rules.
+                    const count = Math.max(packageNumbers.length, variationBarcodes.length);
+                    for (let i = 0; i < count; i++) {
+                        if (packageNumbers[i] || variationBarcodes[i]) { // Only add if at least one is present
+                             flatData.push({
+                                ...row, // Keep all original row data
+                                'ShippingPackages.packageNumber.single': packageNumbers[i] || '', // The single package number
+                                'VariationBarcode.code.single': variationBarcodes[i] || '', // The single EAN
+                                originalRowIndex: originalRowIndex, // Keep reference to original row
+                                originalPackageNumbers: packageNumbers, // Store original full list for reference
+                                originalBarcodes: variationBarcodes // Store original full list for reference
+                            });
+                        }
+                    }
+                     // Handle cases where there are no package numbers or barcodes
+                    if (packageNumbers.length === 0 && variationBarcodes.length === 0) {
+                        flatData.push({
+                            ...row,
+                            'ShippingPackages.packageNumber.single': '',
+                            'VariationBarcode.code.single': '',
+                            originalRowIndex: originalRowIndex,
+                            originalPackageNumbers: [],
+                            originalBarcodes: []
+                        });
+                    }
+
+                });
+                return flatData;
+            };
+
             const handleFileUpload = (event) => {
                 const file = event.target.files[0];
                 if (file) {
@@ -188,13 +228,15 @@
                     reader.onload = (e) => {
                         try {
                             const parsedData = parseCSV(e.target.result, ';'); // Assuming semicolon as delimiter
-                            setData(parsedData);
+                            const flatData = normalizeData(parsedData);
+                            setData(parsedData); // Keep original data for table rendering
+                            setNormalizedData(flatData); // Use normalized data for lookups
                             setMatchedRows(new Set());
                             setError(null);
                             setScanMode('package');
                             setCurrentScan(null);
                         } catch (err) {
-                            setError('Fehler beim Parsen der CSV-Datei. Bitte überprüfen Sie das Format.');
+                            setError('Fehler beim Parsen oder Vorbereiten der CSV-Datei. Bitte überprüfen Sie das Format.');
                             console.error(err);
                         }
                     };
@@ -205,15 +247,15 @@
             const handleScan = (scannedValue) => {
                 setError(null);
                 if (scanMode === 'package') {
-                    const matchingRows = data.filter(row => {
-                        const packageNumbersInRow = row['ShippingPackages.packageNumber'] ? row['ShippingPackages.packageNumber'].split(',').map(pn => pn.trim()) : [];
-                        return packageNumbersInRow.includes(scannedValue);
-                    });
+                    // Find all normalized entries that match the scanned package number
+                    const matchingNormalizedEntries = normalizedData.filter(item =>
+                        item['ShippingPackages.packageNumber.single'] === scannedValue
+                    );
 
-                    if (matchingRows.length > 0) {
-                        const expectedBarcodes = matchingRows
-                            .map(row => row['VariationBarcode.code'])
-                            .filter(barcode => barcode && barcode !== 'N/A' && barcode !== ''); // Filter out empty, null or 'N/A' barcodes
+                    if (matchingNormalizedEntries.length > 0) {
+                        const expectedBarcodes = matchingNormalizedEntries
+                            .map(item => ({ ean: item['VariationBarcode.code.single'], originalRowIndex: item.originalRowIndex }))
+                            .filter(item => item.ean && item.ean !== 'N/A' && item.ean !== '');
 
                         if (expectedBarcodes.length === 0) {
                             negativeSound.play();
@@ -223,13 +265,23 @@
                             return;
                         }
 
+                        // Collect unique item names and names from the matching entries
+                        const names = new Set();
+                        const itemNames = new Set();
+                        matchingNormalizedEntries.forEach(item => {
+                            names.add(`${item['DeliveryAddress.firstName']} ${item['DeliveryAddress.lastName']}`);
+                            if (item['OrderItem.orderItemName'] && item['OrderItem.orderItemName'] !== 'Versandkosten') {
+                                itemNames.add(item['OrderItem.orderItemName']);
+                            }
+                        });
+
+
                         setCurrentScan({
                             packageNumber: scannedValue,
-                            expectedBarcodes: expectedBarcodes,
-                            scannedBarcodes: new Set(),
-                            name: `${matchingRows[0]['DeliveryAddress.firstName']} ${matchingRows[0]['DeliveryAddress.lastName']}`, // Take from first matching row
-                            itemName: matchingRows.map(row => row['OrderItem.orderItemName']).filter(name => name !== 'Versandkosten').join(', '), // Join relevant item names for display
-                            rowIndicesForPackage: matchingRows.map((row) => data.indexOf(row))
+                            expectedBarcodes: expectedBarcodes, // Array of { ean, originalRowIndex }
+                            scannedItems: new Set(), // Store JSON.stringified { originalRowIndex, ean } for uniqueness
+                            name: Array.from(names).join(', '),
+                            itemName: Array.from(itemNames).join(', ')
                         });
                         setScanMode('barcode');
                         positiveSound.play();
@@ -240,42 +292,37 @@
                         setScanMode('package');
                     }
                 } else { // scanMode === 'barcode'
-                    if (currentScan && currentScan.expectedBarcodes.includes(scannedValue)) {
-                        // Check if this specific barcode has already been scanned for this package
-                        if (currentScan.scannedBarcodes.has(scannedValue)) {
-                            negativeSound.play();
-                            setError('Barcode bereits gescannt für diese Paketnummer!');
-                            return;
-                        }
-
-                        // Mark the barcode as scanned for the current package
-                        const updatedScannedBarcodes = new Set(currentScan.scannedBarcodes).add(scannedValue);
-                        setCurrentScan(prev => ({
-                            ...prev,
-                            scannedBarcodes: updatedScannedBarcodes
-                        }));
-
-                        confirmSound.play();
-
-                        // Find the specific row index for the scanned EAN within the *original data*
-                        const scannedRowIndex = data.findIndex(row =>
-                            (row['ShippingPackages.packageNumber'] ? row['ShippingPackages.packageNumber'].split(',').map(pn => pn.trim()).includes(currentScan.packageNumber) : false) &&
-                            row['VariationBarcode.code'] === scannedValue
+                    if (currentScan) {
+                        // Find the specific expected barcode object that matches the scanned value
+                        const matchedExpectedBarcode = currentScan.expectedBarcodes.find(item =>
+                            item.ean === scannedValue && !currentScan.scannedItems.has(JSON.stringify(item))
                         );
 
-                        if (scannedRowIndex !== -1) {
-                            setMatchedRows(prev => new Set([...prev, scannedRowIndex]));
-                        }
+                        if (matchedExpectedBarcode) {
+                            // Mark the barcode as scanned for the current package
+                            const updatedScannedItems = new Set(currentScan.scannedItems).add(JSON.stringify(matchedExpectedBarcode));
+                            setCurrentScan(prev => ({
+                                ...prev,
+                                scannedItems: updatedScannedItems
+                            }));
 
-                        // Check if all expected barcodes for the current package have been scanned
-                        if (updatedScannedBarcodes.size === currentScan.expectedBarcodes.length) {
-                            // All barcodes for this package are scanned
-                            setCurrentScan(null);
-                            setScanMode('package');
+                            confirmSound.play();
+
+                            // Add the original row index to the set of matched rows for highlighting
+                            setMatchedRows(prev => new Set([...prev, matchedExpectedBarcode.originalRowIndex]));
+
+                            // Check if all expected barcodes for the current package have been scanned
+                            if (updatedScannedItems.size === currentScan.expectedBarcodes.length) {
+                                setCurrentScan(null);
+                                setScanMode('package');
+                            }
+                        } else {
+                            negativeSound.play();
+                            setError('Barcode stimmt nicht überein, gehört nicht zum aktuellen Paket oder wurde bereits gescannt!');
                         }
                     } else {
                         negativeSound.play();
-                        setError('Barcode stimmt nicht überein oder gehört nicht zum aktuellen Paket!');
+                        setError('Kein Paket ausgewählt. Bitte zuerst Paketnummer scannen.');
                     }
                 }
                 if (inputRef.current) {
@@ -306,11 +353,14 @@
                         </p>
                         <p>Erwartete Barcodes:</p>
                         <ul>
-                            {currentScan.expectedBarcodes.map(barcode => (
-                                <li key={barcode} style={{ color: currentScan.scannedBarcodes.has(barcode) ? 'green' : '#dc3545' }}>
-                                    {barcode} {currentScan.scannedBarcodes.has(barcode) ? ' (Gescannt)' : ' (Ausstehend)'}
-                                </li>
-                            ))}
+                            {currentScan.expectedBarcodes.map(item => {
+                                const isScanned = currentScan.scannedItems.has(JSON.stringify(item));
+                                return (
+                                    <li key={`${item.ean}-${item.originalRowIndex}`} style={{ color: isScanned ? 'green' : '#dc3545' }}>
+                                        {item.ean} {isScanned ? ' (Gescannt)' : ' (Ausstehend)'} (Zeile: {item.originalRowIndex + 2})
+                                    </li>
+                                );
+                            })}
                         </ul>
                         <p className="mt-2">
                             Bitte scannen Sie den <span className="accent">Barcode</span>
