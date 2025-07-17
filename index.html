@@ -1,446 +1,96 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="de">
 <head>
-    <meta charset="utf-8">
-    <title>SpedScan Scanner</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f0f2f5;
-            color: #333;
-        }
-        .container {
-            max-width: 900px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            overflow-x: auto;
-        }
-        h1 {
-            color: #1d1d1f;
-            font-size: 28px;
-            font-weight: 600;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-        .file-input-label {
-            display: block;
-            width: fit-content;
-            margin: 20px auto;
-            padding: 12px 25px;
-            background-color: #007bff;
-            color: white;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-        .file-input-label:hover {
-            background-color: #0056b3;
-        }
-        input[type="file"] {
-            display: none;
-        }
-        .search-container {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-        .search-container input[type="text"] {
-            flex-grow: 1;
-            padding: 12px;
-            border: 1px solid #ccc;
-            border-radius: 8px;
-            font-size: 16px;
-        }
-        .search-container button {
-            padding: 12px 20px;
-            background-color: #28a745;
-            color: white;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 16px;
-            transition: background-color 0.3s ease;
-        }
-        .search-container button:hover {
-            background-color: #218838;
-        }
-        .error-message {
-            color: #dc3545;
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
-            padding: 10px;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            text-align: center;
-        }
-        .scan-status {
-            background-color: #e9ecef;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            text-align: center;
-            color: #6e6e73;
-        }
-        .scan-status .accent {
-            font-weight: bold;
-            color: #007bff;
-        }
-        .scan-status ul {
-            list-style-type: none;
-            padding: 0;
-            margin-top: 10px;
-            display: inline-block; /* To center the list items */
-            text-align: left; /* Aligns content of li to left */
-        }
-        .scan-status li {
-            padding: 5px 0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background-color: #fff;
-            border-radius: 8px;
-            overflow: hidden;
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-        }
-        th, td {
-            border: 1px solid #dee2e6;
-            padding: 12px;
-            text-align: left;
-            white-space: nowrap; /* Prevent text wrapping */
-        }
-        th {
-            background-color: #e9ecef;
-            font-weight: 600;
-            color: #495057;
-        }
-        tbody tr:nth-child(even) {
-            background-color: #f8f9fa;
-        }
-        tbody tr:hover {
-            background-color: #e2f0ff;
-        }
-        .matched-row {
-            background-color: #d4edda !important; /* Green for matched rows */
-            color: #155724;
-            font-weight: 500;
-        }
-        .matched-row td {
-            border-color: #c3e6cb;
-        }
-    </style>
-    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <meta charset="UTF-8">
+  <title>Sendung & EAN Scanner</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    input[type="file"], input[type="text"] {
+      display: block;
+      margin: 10px 0;
+      padding: 8px;
+      font-size: 16px;
+    }
+    #output {
+      margin-top: 20px;
+    }
+    ul {
+      padding-left: 20px;
+    }
+    li {
+      margin-bottom: 5px;
+    }
+  </style>
 </head>
 <body>
-    <div id="root"></div>
+  <h1>Sendungsnummer-EAN Scanner</h1>
 
-    <script type="text/babel">
-        const { useState, useEffect, useRef } = React;
+  <label for="csvInput">CSV-Datei laden:</label>
+  <input type="file" id="csvInput" accept=".csv" />
 
-        function App() {
-            const [data, setData] = useState([]); // Original parsed CSV data
-            const [normalizedData, setNormalizedData] = useState([]); // Flattened data for easier lookup
-            const [fileName, setFileName] = useState('');
-            const [scanMode, setScanMode] = useState('package'); // 'package' or 'barcode'
-            // currentScan: { packageNumber: string, expectedBarcodes: [{ ean: string, originalRowIndex: number }], scannedItems: Set<string (JSON.stringified { originalRowIndex, ean })>, name: string, itemName: string }
-            const [currentScan, setCurrentScan] = useState(null); 
-            const [matchedRows, setMatchedRows] = useState(new Set()); // Stores original row indices that have *any* matched EAN
-            const [error, setError] = useState(null);
-            const inputRef = useRef(null);
+  <label for="scanInput">Sendungsnummer scannen oder eingeben:</label>
+  <input type="text" id="scanInput" placeholder="z. B. 1234567890" />
 
-            const positiveSound = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
-            const negativeSound = new Audio('https://www.soundjay.com/buttons/sounds/button-9.mp3');
-            const confirmSound = new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3');
+  <div id="output"></div>
 
-            useEffect(() => {
-                if (inputRef.current) {
-                    inputRef.current.focus();
-                }
-            }, [scanMode]);
+  <script>
+    const dataBySendungsnummer = {};
 
-            const parseCSV = (csvText, delimiter) => {
-                const lines = csvText.split('\n').filter(line => line.trim() !== '');
-                if (lines.length === 0) return [];
-                const headers = lines[0].split(delimiter).map(header => header.trim());
-                return lines.slice(1).map(line => {
-                    const values = line.split(delimiter).map(value => value.trim());
-                    const row = {};
-                    headers.forEach((header, index) => {
-                        row[header] = values[index];
-                    });
-                    return row;
-                });
-            };
+    document.getElementById('csvInput').addEventListener('change', function (event) {
+      const file = event.target.files[0];
+      if (!file) return;
 
-            // New function to normalize data
-            const normalizeData = (originalData) => {
-                const flatData = [];
-                originalData.forEach((row, originalRowIndex) => {
-                    const packageNumbers = row['ShippingPackages.packageNumber'] ? row['ShippingPackages.packageNumber'].split(',').map(pn => pn.trim()) : [];
-                    const variationBarcodes = row['VariationBarcode.code'] ? row['VariationBarcode.code'].split(',').map(bc => bc.trim()) : [];
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const text = e.target.result;
+        const lines = text.trim().split('\n');
+        const header = lines.shift().split(';').map(h => h.trim());
 
-                    // Assuming a 1:1 correspondence for multiple package numbers and barcodes in a single row
-                    // If a row has N package numbers and M barcodes, it will create min(N,M) entries.
-                    // If N != M, this logic needs to be refined based on actual data structure/rules.
-                    const count = Math.max(packageNumbers.length, variationBarcodes.length);
-                    for (let i = 0; i < count; i++) {
-                        if (packageNumbers[i] || variationBarcodes[i]) { // Only add if at least one is present
-                             flatData.push({
-                                ...row, // Keep all original row data
-                                'ShippingPackages.packageNumber.single': packageNumbers[i] || '', // The single package number
-                                'VariationBarcode.code.single': variationBarcodes[i] || '', // The single EAN
-                                originalRowIndex: originalRowIndex, // Keep reference to original row
-                                originalPackageNumbers: packageNumbers, // Store original full list for reference
-                                originalBarcodes: variationBarcodes // Store original full list for reference
-                            });
-                        }
-                    }
-                     // Handle cases where there are no package numbers or barcodes
-                    if (packageNumbers.length === 0 && variationBarcodes.length === 0) {
-                        flatData.push({
-                            ...row,
-                            'ShippingPackages.packageNumber.single': '',
-                            'VariationBarcode.code.single': '',
-                            originalRowIndex: originalRowIndex,
-                            originalPackageNumbers: [],
-                            originalBarcodes: []
-                        });
-                    }
+        lines.forEach(line => {
+          const values = line.split(';').map(v => v.trim());
+          if (values.length !== header.length) return;
 
-                });
-                return flatData;
-            };
+          const row = {};
+          header.forEach((key, i) => row[key] = values[i]);
 
-            const handleFileUpload = (event) => {
-                const file = event.target.files[0];
-                if (file) {
-                    setFileName(file.name);
-                    const reader = new FileReader();
-                    reader.onload = (e) => {
-                        try {
-                            const parsedData = parseCSV(e.target.result, ';'); // Assuming semicolon as delimiter
-                            const flatData = normalizeData(parsedData);
-                            setData(parsedData); // Keep original data for table rendering
-                            setNormalizedData(flatData); // Use normalized data for lookups
-                            setMatchedRows(new Set());
-                            setError(null);
-                            setScanMode('package');
-                            setCurrentScan(null);
-                        } catch (err) {
-                            setError('Fehler beim Parsen oder Vorbereiten der CSV-Datei. Bitte überprüfen Sie das Format.');
-                            console.error(err);
-                        }
-                    };
-                    reader.readAsText(file);
-                }
-            };
+          const ean = row['EAN'];
+          const snrList = row['Sendungsnummer']?.split(',').map(s => s.trim()) || [];
 
-            const handleScan = (scannedValue) => {
-                setError(null);
-                if (scanMode === 'package') {
-                    // Find all normalized entries that match the scanned package number
-                    const matchingNormalizedEntries = normalizedData.filter(item =>
-                        item['ShippingPackages.packageNumber.single'] === scannedValue
-                    );
+          snrList.forEach(snr => {
+            if (!dataBySendungsnummer[snr]) {
+              dataBySendungsnummer[snr] = [];
+            }
+            dataBySendungsnummer[snr].push(ean);
+          });
+        });
 
-                    if (matchingNormalizedEntries.length > 0) {
-                        const expectedBarcodes = matchingNormalizedEntries
-                            .map(item => ({ ean: item['VariationBarcode.code.single'], originalRowIndex: item.originalRowIndex }))
-                            .filter(item => item.ean && item.ean !== 'N/A' && item.ean !== '');
+        alert("CSV wurde erfolgreich geladen.");
+      };
 
-                        if (expectedBarcodes.length === 0) {
-                            negativeSound.play();
-                            setError('Keine scannbaren Barcodes für diese Paketnummer gefunden!');
-                            setCurrentScan(null);
-                            setScanMode('package');
-                            return;
-                        }
+      reader.readAsText(file);
+    });
 
-                        // Collect unique item names and names from the matching entries
-                        const names = new Set();
-                        const itemNames = new Set();
-                        matchingNormalizedEntries.forEach(item => {
-                            names.add(`${item['DeliveryAddress.firstName']} ${item['DeliveryAddress.lastName']}`);
-                            if (item['OrderItem.orderItemName'] && item['OrderItem.orderItemName'] !== 'Versandkosten') {
-                                itemNames.add(item['OrderItem.orderItemName']);
-                            }
-                        });
+    document.getElementById('scanInput').addEventListener('input', function () {
+      const input = this.value.trim();
+      const outputDiv = document.getElementById('output');
+      outputDiv.innerHTML = '';
 
+      if (input === '') return;
 
-                        setCurrentScan({
-                            packageNumber: scannedValue,
-                            expectedBarcodes: expectedBarcodes, // Array of { ean, originalRowIndex }
-                            scannedItems: new Set(), // Store JSON.stringified { originalRowIndex, ean } for uniqueness
-                            name: Array.from(names).join(', '),
-                            itemName: Array.from(itemNames).join(', ')
-                        });
-                        setScanMode('barcode');
-                        positiveSound.play();
-                    } else {
-                        negativeSound.play();
-                        setError('Paketnummer nicht gefunden!');
-                        setCurrentScan(null);
-                        setScanMode('package');
-                    }
-                } else { // scanMode === 'barcode'
-                    if (currentScan) {
-                        // Find the specific expected barcode object that matches the scanned value
-                        const matchedExpectedBarcode = currentScan.expectedBarcodes.find(item =>
-                            item.ean === scannedValue && !currentScan.scannedItems.has(JSON.stringify(item))
-                        );
-
-                        if (matchedExpectedBarcode) {
-                            // Mark the barcode as scanned for the current package
-                            const updatedScannedItems = new Set(currentScan.scannedItems).add(JSON.stringify(matchedExpectedBarcode));
-                            setCurrentScan(prev => ({
-                                ...prev,
-                                scannedItems: updatedScannedItems
-                            }));
-
-                            confirmSound.play();
-
-                            // Add the original row index to the set of matched rows for highlighting
-                            setMatchedRows(prev => new Set([...prev, matchedExpectedBarcode.originalRowIndex]));
-
-                            // Check if all expected barcodes for the current package have been scanned
-                            if (updatedScannedItems.size === currentScan.expectedBarcodes.length) {
-                                setCurrentScan(null);
-                                setScanMode('package');
-                            }
-                        } else {
-                            negativeSound.play();
-                            setError('Barcode stimmt nicht überein, gehört nicht zum aktuellen Paket oder wurde bereits gescannt!');
-                        }
-                    } else {
-                        negativeSound.play();
-                        setError('Kein Paket ausgewählt. Bitte zuerst Paketnummer scannen.');
-                    }
-                }
-                if (inputRef.current) {
-                    inputRef.current.value = ''; // Clear input field
-                    inputRef.current.focus();
-                }
-            };
-
-            // Rendering the current scan status
-            const renderCurrentScan = () => {
-                if (!currentScan) {
-                    return (
-                        <p className="scan-status">
-                            Scannen Sie eine <span className="accent">Paketnummer</span>
-                        </p>
-                    );
-                }
-                return (
-                    <div className="scan-status">
-                        <p>
-                            Gescannte Paketnummer: <span className="accent">{currentScan.packageNumber}</span>
-                        </p>
-                        <p>
-                            Name: <span className="accent">{currentScan.name}</span>
-                        </p>
-                        <p>
-                            Artikelname: <span className="accent">{currentScan.itemName}</span>
-                        </p>
-                        <p>Erwartete Barcodes:</p>
-                        <ul>
-                            {currentScan.expectedBarcodes.map(item => {
-                                const isScanned = currentScan.scannedItems.has(JSON.stringify(item));
-                                return (
-                                    <li key={`${item.ean}-${item.originalRowIndex}`} style={{ color: isScanned ? 'green' : '#dc3545' }}>
-                                        {item.ean} {isScanned ? ' (Gescannt)' : ' (Ausstehend)'} (Zeile: {item.originalRowIndex + 2})
-                                    </li>
-                                );
-                            })}
-                        </ul>
-                        <p className="mt-2">
-                            Bitte scannen Sie den <span className="accent">Barcode</span>
-                        </p>
-                    </div>
-                );
-            };
-
-            // Rendering the table
-            const renderTable = () => {
-                if (data.length === 0) {
-                    return <p style={{ textAlign: 'center', marginTop: '20px' }}>Bitte laden Sie eine CSV-Datei hoch.</p>;
-                }
-
-                const headers = Object.keys(data[0]);
-
-                return (
-                    <table>
-                        <thead>
-                            <tr>
-                                {headers.map((header, index) => (
-                                    <th key={index}>{header}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {data.map((row, rowIndex) => (
-                                <tr key={rowIndex} className={matchedRows.has(rowIndex) ? 'matched-row' : ''}>
-                                    {headers.map((header, colIndex) => (
-                                        <td key={colIndex}>{row[header]}</td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                );
-            };
-
-            return (
-                <div className="container">
-                    <h1>SpedScan Paketscanner</h1>
-                    <label htmlFor="file-upload" className="file-input-label">
-                        {fileName ? `Datei geladen: ${fileName}` : 'CSV-Datei auswählen'}
-                    </label>
-                    <input
-                        id="file-upload"
-                        type="file"
-                        accept=".csv"
-                        onChange={handleFileUpload}
-                    />
-
-                    {error && <div className="error-message">{error}</div>}
-
-                    <div className="search-container">
-                        <input
-                            type="text"
-                            ref={inputRef}
-                            placeholder={scanMode === 'package' ? 'Paketnummer scannen...' : 'Barcode scannen...'}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' && e.target.value) {
-                                    handleScan(e.target.value);
-                                }
-                            }}
-                        />
-                        <button onClick={() => {
-                            if (inputRef.current && inputRef.current.value) {
-                                handleScan(inputRef.current.value);
-                            }
-                        }}>
-                            Scannen
-                        </button>
-                    </div>
-
-                    {renderCurrentScan()}
-                    {renderTable()}
-                </div>
-            );
-        }
-
-        ReactDOM.render(<App />, document.getElementById('root'));
-    </script>
+      const eans = dataBySendungsnummer[input];
+      if (eans && eans.length > 0) {
+        const list = eans.map(ean => `<li>${ean}</li>`).join('');
+        outputDiv.innerHTML = `
+          <h3>Gefundene EANs für Sendungsnummer: <strong>${input}</strong></h3>
+          <ul>${list}</ul>
+        `;
+      } else {
+        outputDiv.innerHTML = `<p><strong>Keine EANs</strong> für Sendungsnummer <em>${input}</em> gefunden.</p>`;
+      }
+    });
+  </script>
 </body>
 </html>
