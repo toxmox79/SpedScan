@@ -1,17 +1,18 @@
 const CACHE_NAME = 'speditions-scanner-v1';
 const urlsToCache = [
-  './', // Caches the root of the scope (e.g., /SpedScan/)
-  './index.html',
-  './manifest.json',
-  './sounds/confirm.mp3',
-  './sounds/negative.mp3',
-  './sounds/positive.mp3',
+  '/',
+  '/index.html',
+  '/manifest.json',
+  '/sounds/confirm.mp3',
+  '/sounds/negative.mp3',
+  '/sounds/positive.mp3',
   'https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js',
   'https://unpkg.com/papaparse@latest/papaparse.min.js',
-  './icons/icon-192x192.png',
-  './icons/icon-512x512.png'
+  // Add your icons here once you create them
+  '/icons/icon-192x192.png',
+  '/icons/icon-512x512.png'
 ];
 
 self.addEventListener('install', event => {
