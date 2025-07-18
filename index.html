@@ -1,460 +1,396 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Order Scanner</title>
-
-  <!-- Bibliotheken -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#93c01f" />
+    <meta charset="utf-8">
+    <title>SpedScan Scanner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f0f2f5;
+            color: #333;
+        }
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            overflow-x: auto;
+        }
+        h1 {
+            color: #1d1d1f;
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .file-input-label {
+            display: block;
+            width: fit-content;
+            margin: 20px auto;
+            padding: 12px 25px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .file-input-label:hover {
+            background-color: #0056b3;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        .search-container {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+        .search-container input[type="text"] {
+            flex-grow: 1;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            font-size: 16px;
+        }
+        .search-container button {
+            padding: 12px 20px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        .search-container button:hover {
+            background-color: #218838;
+        }
+        .error-message {
+            color: #dc3545;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        .scan-status {
+            background-color: #e9ecef;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+            color: #6e6e73;
+        }
+        .scan-status .accent {
+            font-weight: bold;
+            color: #007bff;
+        }
+        .scan-status ul {
+            list-style-type: none;
+            padding: 0;
+            margin-top: 10px;
+            display: inline-block; /* To center the list items */
+            text-align: left; /* Aligns content of li to left */
+        }
+        .scan-status li {
+            padding: 5px 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            background-color: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 12px;
+            text-align: left;
+            white-space: nowrap; /* Prevent text wrapping */
+        }
+        th {
+            background-color: #e9ecef;
+            font-weight: 600;
+            color: #495057;
+        }
+        tbody tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        tbody tr:hover {
+            background-color: #e2f0ff;
+        }
+        .matched-row {
+            background-color: #d4edda !important; /* Green for matched rows */
+            color: #155724;
+            font-weight: 500;
+        }
+        .matched-row td {
+            border-color: #c3e6cb;
+        }
+    </style>
+    <script src="https://unpkg.com/react@17/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@17/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 </head>
-<body class="bg-gray-100 font-sans">
-  <div id="root"></div>
+<body>
+    <div id="root"></div>
 
-  <script type="text/babel">
-    function App() {
-      const [orders, setOrders] = React.useState([]);
-      const [currentScan, setCurrentScan] = React.useState('');
-      const [currentOrder, setCurrentOrder] = React.useState(null);
-      const [scanStep, setScanStep] = React.useState('order');
-      const [completedOrders, setCompletedOrders] = React.useState(new Set());
-      const inputRef = React.useRef(null);
-      const rowRefs = React.useRef({});
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
 
-      const positiveSound = React.useRef(null);
-      const negativeSound = React.useRef(null);
-      const confirmSound = React.useRef(null);
+        function App() {
+            const [data, setData] = useState([]);
+            const [fileName, setFileName] = useState('');
+            const [scanMode, setScanMode] = useState('package'); // 'package' or 'barcode'
+            const [currentScan, setCurrentScan] = useState(null); // { packageNumber, expectedBarcodes: [], scannedBarcodes: Set, name, itemName, rowIndicesForPackage: [] }
+            const [matchedRows, setMatchedRows] = useState(new Set()); // Stores row indices of matched items
+            const [error, setError] = useState(null);
+            const inputRef = useRef(null);
 
-      // Initialisiere Sounds nach erster Benutzerinteraktion
-      React.useEffect(() => {
-        const enableAudio = () => {
-          positiveSound.current = new Audio('sounds/positive.mp3');
-          negativeSound.current = new Audio('sounds/negative.mp3');
-          confirmSound.current = new Audio('sounds/confirm.mp3');
-          document.removeEventListener('click', enableAudio);
-        };
-        document.addEventListener('click', enableAudio);
-        return () => document.removeEventListener('click', enableAudio);
-      }, []);
+            const positiveSound = new Audio('https://www.soundjay.com/buttons/sounds/button-10.mp3');
+            const negativeSound = new Audio('https://www.soundjay.com/buttons/sounds/button-9.mp3');
+            const confirmSound = new Audio('https://www.soundjay.com/buttons/sounds/button-3.mp3');
 
-      const handleFileUpload = (event) => {
-        const file = event.target.files[0];
-        if (file) {
-          Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            transformHeader: (header) => header.trim().replace(/^"|"$/g, ''),
-            transform: (value) => value.trim().replace(/^"|"$/g, ''),
-            complete: (results) => {
-              console.log('Parsed CSV Data:', results.data); // For debugging
-              const seenOrders = new Set();
-              const cleanedData = results.data
-                .filter(row => row['VariationBarcode.code'] && row['Order.id'])
-                .map(row => ({
-                  orderId: row['Order.id'],
-                  barcode: row['VariationBarcode.code'],
-                  packageNumber: row['ShippingPackages.packageNumber']?.startsWith('3')
-                    ? row['ShippingPackages.packageNumber'].replace(/^3/, '003')
-                    : row['ShippingPackages.packageNumber'],
-                  firstName: row['DeliveryAddress.firstName'],
-                  lastName: row['DeliveryAddress.lastName'],
-                  orderItemName: row['OrderItem.orderItemName'] // Neue Spalte hinzugefügt
-                }))
-                .filter(row => {
-                  if (seenOrders.has(row.orderId)) return false;
-                  seenOrders.add(row.orderId);
-                  return true;
+
+            useEffect(() => {
+                if (inputRef.current) {
+                    inputRef.current.focus();
+                }
+            }, [scanMode]);
+
+            const parseCSV = (csvText, delimiter) => {
+                const lines = csvText.split('\n').filter(line => line.trim() !== '');
+                if (lines.length === 0) return [];
+                const headers = lines[0].split(delimiter).map(header => header.trim());
+                return lines.slice(1).map(line => {
+                    const values = line.split(delimiter).map(value => value.trim());
+                    const row = {};
+                    headers.forEach((header, index) => {
+                        row[header] = values[index];
+                    });
+                    return row;
                 });
-              setOrders(cleanedData);
-            },
-            error: (err) => console.error(err)
-          });
+            };
+
+            const handleFileUpload = (event) => {
+                const file = event.target.files[0];
+                if (file) {
+                    setFileName(file.name);
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const parsedData = parseCSV(e.target.result, ';'); // Assuming semicolon as delimiter
+                            setData(parsedData);
+                            setMatchedRows(new Set());
+                            setError(null);
+                            setScanMode('package');
+                            setCurrentScan(null);
+                        } catch (err) {
+                            setError('Fehler beim Parsen der CSV-Datei. Bitte überprüfen Sie das Format.');
+                            console.error(err);
+                        }
+                    };
+                    reader.readAsText(file);
+                }
+            };
+
+            const handleScan = (scannedValue) => {
+                setError(null);
+                if (scanMode === 'package') {
+                    const matchingRows = data.filter(row => {
+                        const packageNumbersInRow = row['ShippingPackages.packageNumber'] ? row['ShippingPackages.packageNumber'].split(',').map(pn => pn.trim()) : [];
+                        return packageNumbersInRow.includes(scannedValue);
+                    });
+
+                    if (matchingRows.length > 0) {
+                        const expectedBarcodes = matchingRows
+                            .map(row => row['VariationBarcode.code'])
+                            .filter(barcode => barcode && barcode !== 'N/A' && barcode !== ''); // Filter out empty, null or 'N/A' barcodes
+
+                        if (expectedBarcodes.length === 0) {
+                            negativeSound.play();
+                            setError('Keine scannbaren Barcodes für diese Paketnummer gefunden!');
+                            setCurrentScan(null);
+                            setScanMode('package');
+                            return;
+                        }
+
+                        setCurrentScan({
+                            packageNumber: scannedValue,
+                            expectedBarcodes: expectedBarcodes,
+                            scannedBarcodes: new Set(),
+                            name: `${matchingRows[0]['DeliveryAddress.firstName']} ${matchingRows[0]['DeliveryAddress.lastName']}`, // Take from first matching row
+                            itemName: matchingRows.map(row => row['OrderItem.orderItemName']).filter(name => name !== 'Versandkosten').join(', '), // Join relevant item names for display
+                            rowIndicesForPackage: matchingRows.map((row) => data.indexOf(row))
+                        });
+                        setScanMode('barcode');
+                        positiveSound.play();
+                    } else {
+                        negativeSound.play();
+                        setError('Paketnummer nicht gefunden!');
+                        setCurrentScan(null);
+                        setScanMode('package');
+                    }
+                } else { // scanMode === 'barcode'
+                    if (currentScan && currentScan.expectedBarcodes.includes(scannedValue)) {
+                        // Check if this specific barcode has already been scanned for this package
+                        if (currentScan.scannedBarcodes.has(scannedValue)) {
+                            negativeSound.play();
+                            setError('Barcode bereits gescannt für diese Paketnummer!');
+                            return;
+                        }
+
+                        // Mark the barcode as scanned for the current package
+                        const updatedScannedBarcodes = new Set(currentScan.scannedBarcodes).add(scannedValue);
+                        setCurrentScan(prev => ({
+                            ...prev,
+                            scannedBarcodes: updatedScannedBarcodes
+                        }));
+
+                        confirmSound.play();
+
+                        // Find the specific row index for the scanned EAN within the *original data*
+                        const scannedRowIndex = data.findIndex(row =>
+                            (row['ShippingPackages.packageNumber'] ? row['ShippingPackages.packageNumber'].split(',').map(pn => pn.trim()).includes(currentScan.packageNumber) : false) &&
+                            row['VariationBarcode.code'] === scannedValue
+                        );
+
+                        if (scannedRowIndex !== -1) {
+                            setMatchedRows(prev => new Set([...prev, scannedRowIndex]));
+                        }
+
+                        // Check if all expected barcodes for the current package have been scanned
+                        if (updatedScannedBarcodes.size === currentScan.expectedBarcodes.length) {
+                            // All barcodes for this package are scanned
+                            setCurrentScan(null);
+                            setScanMode('package');
+                        }
+                    } else {
+                        negativeSound.play();
+                        setError('Barcode stimmt nicht überein oder gehört nicht zum aktuellen Paket!');
+                    }
+                }
+                if (inputRef.current) {
+                    inputRef.current.value = ''; // Clear input field
+                    inputRef.current.focus();
+                }
+            };
+
+            // Rendering the current scan status
+            const renderCurrentScan = () => {
+                if (!currentScan) {
+                    return (
+                        <p className="scan-status">
+                            Scannen Sie eine <span className="accent">Paketnummer</span>
+                        </p>
+                    );
+                }
+                return (
+                    <div className="scan-status">
+                        <p>
+                            Gescannte Paketnummer: <span className="accent">{currentScan.packageNumber}</span>
+                        </p>
+                        <p>
+                            Name: <span className="accent">{currentScan.name}</span>
+                        </p>
+                        <p>
+                            Artikelname: <span className="accent">{currentScan.itemName}</span>
+                        </p>
+                        <p>Erwartete Barcodes:</p>
+                        <ul>
+                            {currentScan.expectedBarcodes.map(barcode => (
+                                <li key={barcode} style={{ color: currentScan.scannedBarcodes.has(barcode) ? 'green' : '#dc3545' }}>
+                                    {barcode} {currentScan.scannedBarcodes.has(barcode) ? ' (Gescannt)' : ' (Ausstehend)'}
+                                </li>
+                            ))}
+                        </ul>
+                        <p className="mt-2">
+                            Bitte scannen Sie den <span className="accent">Barcode</span>
+                        </p>
+                    </div>
+                );
+            };
+
+            // Rendering the table
+            const renderTable = () => {
+                if (data.length === 0) {
+                    return <p style={{ textAlign: 'center', marginTop: '20px' }}>Bitte laden Sie eine CSV-Datei hoch.</p>;
+                }
+
+                const headers = Object.keys(data[0]);
+
+                return (
+                    <table>
+                        <thead>
+                            <tr>
+                                {headers.map((header, index) => (
+                                    <th key={index}>{header}</th>
+                                ))}
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {data.map((row, rowIndex) => (
+                                <tr key={rowIndex} className={matchedRows.has(rowIndex) ? 'matched-row' : ''}>
+                                    {headers.map((header, colIndex) => (
+                                        <td key={colIndex}>{row[header]}</td>
+                                    ))}
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                );
+            };
+
+            return (
+                <div className="container">
+                    <h1>SpedScan Paketscanner</h1>
+                    <label htmlFor="file-upload" className="file-input-label">
+                        {fileName ? `Datei geladen: ${fileName}` : 'CSV-Datei auswählen'}
+                    </label>
+                    <input
+                        id="file-upload"
+                        type="file"
+                        accept=".csv"
+                        onChange={handleFileUpload}
+                    />
+
+                    {error && <div className="error-message">{error}</div>}
+
+                    <div className="search-container">
+                        <input
+                            type="text"
+                            ref={inputRef}
+                            placeholder={scanMode === 'package' ? 'Paketnummer scannen...' : 'Barcode scannen...'}
+                            onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.target.value) {
+                                    handleScan(e.target.value);
+                                }
+                            }}
+                        />
+                        <button onClick={() => {
+                            if (inputRef.current && inputRef.current.value) {
+                                handleScan(inputRef.current.value);
+                            }
+                        }}>
+                            Scannen
+                        </button>
+                    </div>
+
+                    {renderCurrentScan()}
+                    {renderTable()}
+                </div>
+            );
         }
-      };
 
-      const handleScan = (e) => {
-        if (e.key === 'Enter') {
-          const scannedValue = currentScan.trim();
-          if (!scannedValue) return;
-
-          if (scanStep === 'order') {
-            let checkOrderId = scannedValue;
-            // Prüfen, ob der Scan mit "100000" beginnt und lang genug ist
-            if (checkOrderId.startsWith('100000') && checkOrderId.length > 7) {
-              // Entferne die ersten 6 Zeichen und das letzte Zeichen
-              checkOrderId = checkOrderId.substring(6, checkOrderId.length - 1);
-            }
-
-            const order = orders.find(o => o.orderId === checkOrderId);
-            if (order && !completedOrders.has(order.orderId)) {
-              setCurrentOrder(order);
-              setScanStep('barcode');
-              positiveSound.current?.play();
-            } else {
-              negativeSound.current?.play();
-            }
-          } else if (scanStep === 'barcode' && currentOrder) {
-            if (scannedValue === currentOrder.barcode) {
-              setScanStep('package');
-              positiveSound.current?.play();
-            } else {
-              negativeSound.current?.play();
-              setScanStep('order');
-              setCurrentOrder(null);
-            }
-          } else if (scanStep === 'package' && currentOrder) {
-            if (scannedValue === currentOrder.packageNumber) {
-              confirmSound.current?.play();
-              setCompletedOrders(prev => new Set(prev).add(currentOrder.orderId));
-              setCurrentOrder(null);
-              setScanStep('order');
-            } else {
-              negativeSound.current?.play();
-              setScanStep('order');
-              setCurrentOrder(null);
-            }
-          }
-          setCurrentScan('');
-        }
-      };
-
-      React.useEffect(() => {
-        if (inputRef.current) inputRef.current.focus();
-      }, [currentOrder, scanStep]);
-
-      React.useEffect(() => {
-        if (currentOrder) {
-          rowRefs.current[currentOrder.orderId]?.scrollIntoView({
-            behavior: 'smooth',
-            block: 'center'
-          });
-        }
-      }, [currentOrder]);
-
-      return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-6">
-            {/* File Upload */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                CSV-Datei hochladen
-              </label>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#93c01f] file:text-white hover:file:bg-[#7aa018]"
-              />
-            </div>
-
-            {/* Scan Input */}
-            <div className="mb-6">
-              <input
-                ref={inputRef}
-                type="text"
-                value={currentScan}
-                onChange={(e) => setCurrentScan(e.target.value)}
-                onKeyPress={handleScan}
-                placeholder={`Scanne ${scanStep === 'order' ? 'Order ID' : scanStep === 'barcode' ? 'Barcode' : 'Paketnummer'}`}
-                className="w-full px-4 py-3 rounded-lg bg-gray-100 border-none focus:ring-2 focus:ring-[#93c01f] text-lg placeholder-gray-400"
-              />
-            </div>
-
-            {/* Current Order */}
-            {currentOrder && (
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h2 className="text-lg font-semibold text-gray-800">Auftrag #{currentOrder.orderId}</h2>
-                <p className="text-sm text-gray-600">{currentOrder.firstName} {currentOrder.lastName}</p>
-                <p className="text-sm text-gray-600">{currentOrder.orderItemName}</p> {/* Neue Zeile hinzugefügt */}
-                <p className="text-sm text-gray-600">Barcode: {currentOrder.barcode}</p>
-                <p className="text-sm text-gray-600">Paket: {currentOrder.packageNumber}</p>
-              </div>
-            )}
-
-            {/* Order Table */}
-            <div className="max-h-96 overflow-y-auto">
-              {orders.length > 0 && (
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
-                    <tr>
-                      <th className="px-4 py-3">Paketnummer</th>
-                      <th className="px-4 py-3">Barcode</th>
-                      <th className="px-4 py-3">Artikelname</th> {/* Neue Spalte hinzugefügt */}
-                      <th className="px-4 py-3">Order ID</th>
-                      <th className="px-4 py-3">Vorname</th>
-                      <th className="px-4 py-3">Nachname</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.map((order, index) => (
-                      <tr key={index}
-                        ref={el => (rowRefs.current[order.orderId] = el)}
-                        className={`border-b transition-all duration-200
-                          ${completedOrders.has(order.orderId)
-                            ? 'bg-[#93c01f] text-white'
-                            : currentOrder?.orderId === order.orderId
-                            ? 'bg-[#93c01f]/10 border-2 border-[#93c01f]'
-                            : 'bg-white hover:bg-gray-50'}`}>
-                        <td className="px-4 py-3">{order.packageNumber}</td>
-                        <td className="px-4 py-3">{order.barcode}</td>
-                        <td className="px-4 py-3">{order.orderItemName}</td> {/* Neue Spalte hinzugefügt */}
-                        <td className="px-4 py-3">{order.orderId}</td>
-                        <td className="px-4 py-3">{order.firstName}</td>
-                        <td className="px-4 py-3">{order.lastName}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-
-  <!-- Service Worker Registrierung -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('Service Worker registered'))
-        .catch(err => console.error('Service Worker registration failed:', err));
-    }
-  </script>
-</body>
-</html>
-
-<!DOCTYPE html>
-<html lang="de">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Order Scanner</title>
-
-  <!-- Bibliotheken -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
-  <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- PWA -->
-  <link rel="manifest" href="manifest.json" />
-  <meta name="theme-color" content="#93c01f" />
-</head>
-<body class="bg-gray-100 font-sans">
-  <div id="root"></div>
-
-  <script type="text/babel">
-    function App() {
-      const [orders, setOrders] = React.useState([]);
-      const [currentScan, setCurrentScan] = React.useState('');
-      const [currentOrder, setCurrentOrder] = React.useState(null);
-      const [scanStep, setScanStep] = React.useState('package'); // Geändert von 'order'
-      const [completedOrders, setCompletedOrders] = React.useState(new Set());
-      const inputRef = React.useRef(null);
-
-      const positiveSound = React.useRef(null);
-      const negativeSound = React.useRef(null);
-      const confirmSound = React.useRef(null);
-
-      // Initialisiere Sounds nach erster Benutzerinteraktion
-      React.useEffect(() => {
-        const enableAudio = () => {
-          positiveSound.current = new Audio('sounds/positive.mp3');
-          negativeSound.current = new Audio('sounds/negative.mp3');
-          confirmSound.current = new Audio('sounds/confirm.mp3');
-          positiveSound.current.play().catch(() => {});
-          document.removeEventListener('click', enableAudio);
-        };
-        document.addEventListener('click', enableAudio);
-        return () => document.removeEventListener('click', enableAudio);
-      }, []);
-
-      const handleFileUpload = (event) => {
-        const file = event.target.files[0];
-        if (file) {
-          Papa.parse(file, {
-            header: true,
-            skipEmptyLines: true,
-            transformHeader: (header) => header.trim().replace(/^"|"$/g, ''),
-            transform: (value) => value.trim().replace(/^"|"$/g, ''),
-            complete: (results) => {
-              const seenOrders = new Set();
-              const cleanedData = results.data
-                .filter(row => row['VariationBarcode.code'] && row['Order.id'])
-                .map(row => ({
-                  orderId: row['Order.id'],
-                  barcode: row['VariationBarcode.code'],
-                  packageNumber: row['ShippingPackages.packageNumber']?.startsWith('3')
-                    ? row['ShippingPackages.packageNumber'].replace(/^3/, '003')
-                    : row['ShippingPackages.packageNumber'],
-                  firstName: row['DeliveryAddress.firstName'],
-                  lastName: row['DeliveryAddress.lastName']
-                }))
-                .filter(row => {
-                  if (seenOrders.has(row.orderId)) return false;
-                  seenOrders.add(row.orderId);
-                  return true;
-                });
-              setOrders(cleanedData);
-            },
-            error: (err) => console.error(err)
-          });
-        }
-      };
-
-      const handleScan = (e) => {
-        if (e.key === 'Enter') {
-          const scannedValue = currentScan.trim();
-          if (!scannedValue) return;
-
-          if (scanStep === 'order') {
-            let checkOrderId = scannedValue;
-            // Prüfen, ob der Scan mit "100000" beginnt und lang genug ist
-            if (checkOrderId.startsWith('100000') && checkOrderId.length > 7) {
-              // Entferne die ersten 6 Zeichen und das letzte Zeichen
-              checkOrderId = checkOrderId.substring(6, checkOrderId.length - 1);
-            }
-
-            const order = orders.find(o => o.orderId === checkOrderId);
-            if (order && !completedOrders.has(order.orderId)) {
-              setCurrentOrder(order);
-              setScanStep('barcode');
-              positiveSound.current?.play();
-            } else {
-              negativeSound.current?.play();
-            }
-          } else if (scanStep === 'barcode' && currentOrder) {
-            if (scannedValue === currentOrder.barcode) {
-              setScanStep('package');
-              positiveSound.current?.play();
-            } else {
-              negativeSound.current?.play();
-              setScanStep('order');
-              setCurrentOrder(null);
-            }
-          } else if (scanStep === 'package' && currentOrder) {
-            if (scannedValue === currentOrder.packageNumber) {
-              confirmSound.current?.play();
-              setCompletedOrders(prev => new Set(prev).add(currentOrder.orderId));
-              setCurrentOrder(null);
-              setScanStep('order');
-            } else {
-              negativeSound.current?.play();
-              setScanStep('order');
-              setCurrentOrder(null);
-            }
-          }
-          setCurrentScan('');
-        }
-      };
-
-      React.useEffect(() => {
-        if (inputRef.current) inputRef.current.focus();
-      }, [currentOrder, scanStep]);
-
-      return (
-        <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
-          <div className="w-full max-w-4xl bg-white rounded-2xl shadow-xl p-6">
-            {/* File Upload */}
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                CSV-Datei hochladen
-              </label>
-              <input
-                type="file"
-                accept=".csv"
-                onChange={handleFileUpload}
-                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#93c01f] file:text-white hover:file:bg-[#7aa018]"
-              />
-            </div>
-
-            {/* Scan Input */}
-            <div className="mb-6">
-              <input
-                ref={inputRef}
-                type="text"
-                value={currentScan}
-                onChange={(e) => setCurrentScan(e.target.value)}
-                onKeyPress={handleScan}
-                placeholder={`Scanne ${scanStep === 'order' ? 'Order ID' : scanStep === 'barcode' ? 'Barcode' : 'Paketnummer'}`}
-                className="w-full px-4 py-3 rounded-lg bg-gray-100 border-none focus:ring-2 focus:ring-[#93c01f] text-lg placeholder-gray-400"
-              />
-            </div>
-
-            {/* Current Order */}
-            {currentOrder && (
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h2 className="text-lg font-semibold text-gray-800">Auftrag #{currentOrder.orderId}</h2>
-                <p className="text-sm text-gray-600">{currentOrder.firstName} {currentOrder.lastName}</p>
-                <p className="text-sm text-gray-600">Barcode: {currentOrder.barcode}</p>
-                <p className="text-sm text-gray-600">Paket: {currentOrder.packageNumber}</p>
-              </div>
-            )}
-
-            {/* Order Table */}
-            <div className="max-h-96 overflow-y-auto">
-              {orders.length > 0 && (
-                <table className="w-full text-sm text-left text-gray-500">
-                  <thead className="text-xs text-gray-700 uppercase bg-gray-50 sticky top-0">
-                    <tr>
-                      <th className="px-4 py-3">Order ID</th>
-                      <th className="px-4 py-3">Barcode</th>
-                      <th className="px-4 py-3">Paketnummer</th>
-                      <th className="px-4 py-3">Vorname</th>
-                      <th className="px-4 py-3">Nachname</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {orders.map((order, index) => (
-                      <tr key={index}
-                        className={`border-b transition-all duration-200
-                          ${completedOrders.has(order.orderId)
-                            ? 'bg-[#93c01f] text-white'
-                            : currentOrder?.orderId === order.orderId
-                            ? 'bg-[#93c01f]/10 border-2 border-[#93c01f]'
-                            : 'bg-white hover:bg-gray-50'}`}>
-                        <td className="px-4 py-3">{order.orderId}</td>
-                        <td className="px-4 py-3">{order.barcode}</td>
-                        <td className="px-4 py-3">{order.packageNumber}</td>
-                        <td className="px-4 py-3">{order.firstName}</td>
-                        <td className="px-4 py-3">{order.lastName}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              )}
-            </div>
-          </div>
-        </div>
-      );
-    }
-
-    const root = ReactDOM.createRoot(document.getElementById('root'));
-    root.render(<App />);
-  </script>
-
-  <!-- Service Worker Registrierung -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('service-worker.js')
-        .then(() => console.log('Service Worker registered'))
-        .catch(err => console.error('Service Worker registration failed:', err));
-    }
-  </script>
+        ReactDOM.render(<App />, document.getElementById('root'));
+    </script>
 </body>
 </html>
