@@ -12,118 +12,23 @@
       margin: 0;
       padding: 0;
     }
-    .container {
-      max-width: 960px;
-      margin: 0 auto;
-      padding: 24px;
-    }
-    h1 {
-      font-size: 32px;
-      font-weight: 600;
-      color: #1d1d1f;
-      text-align: center;
-      margin-bottom: 24px;
-    }
-    .error {
-      background-color: #fee2e2;
-      color: #dc2626;
-      padding: 16px;
-      border-radius: 12px;
-      text-align: center;
-      margin-bottom: 16px;
-    }
-    .file-input-label {
-      display: block;
-      color: #1d1d1f;
-      font-size: 16px;
-      font-weight: 500;
-      margin-bottom: 8px;
-    }
-    .file-input {
-      display: block;
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d2d2d7;
-      border-radius: 12px;
-      background-color: #fff;
-      font-size: 16px;
-      color: #1d1d1f;
-      cursor: pointer;
-    }
-    .file-input::-webkit-file-upload-button {
-      background-color: #93c01f;
-      color: #fff;
-      border: none;
-      padding: 8px 16px;
-      border-radius: 8px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-    }
-    .file-input::-webkit-file-upload-button:hover {
-      background-color: #7aa01a;
-    }
-    .scan-input {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d2d2d7;
-      border-radius: 12px;
-      font-size: 16px;
-      color: #1d1d1f;
-      background-color: #fff;
-      outline: none;
-      transition: border-color 0.2s;
-    }
-    .scan-input:focus {
-      border-color: #93c01f;
-      box-shadow: 0 0 0 3px rgba(147, 192, 31, 0.2);
-    }
-    .scan-status {
-      text-align: center;
-      font-size: 16px;
-      color: #1d1d1f;
-      margin-top: 16px;
-    }
-    .scan-status .accent {
-      color: #93c01f;
-      font-weight: 500;
-    }
-    .table-container {
-      background-color: #fff;
-      border-radius: 12px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-      overflow-x: auto;
-      margin-top: 24px;
-      border: 1px solid #d2d2d7;
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    th {
-      background-color: #f5f5f7;
-      color: #6e6e73;
-      font-size: 12px;
-      font-weight: 600;
-      text-transform: uppercase;
-      padding: 12px 16px;
-      text-align: left;
-    }
-    td {
-      padding: 12px 16px;
-      border-top: 1px solid #d2d2d7;
-      font-size: 14px;
-      color: #1d1d1f;
-    }
-    tr.matched {
-      background-color: #e6f3d8;
-    }
-    .no-data {
-      text-align: center;
-      color: #6e6e73;
-      padding: 16px;
-      font-size: 16px;
-    }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+    h1 { font-size: 32px; font-weight: 600; color: #1d1d1f; text-align: center; margin-bottom: 24px; }
+    .error { background-color: #fee2e2; color: #dc2626; padding: 16px; border-radius: 12px; text-align: center; margin-bottom: 16px; }
+    .file-input-label { display: block; color: #1d1d1f; font-size: 16px; font-weight: 500; margin-bottom: 8px; }
+    .file-input { display: block; width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 12px; background-color: #fff; font-size: 16px; color: #1d1d1f; cursor: pointer; }
+    .file-input::-webkit-file-upload-button { background-color: #93c01f; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+    .file-input::-webkit-file-upload-button:hover { background-color: #7aa01a; }
+    .scan-input { width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 12px; font-size: 16px; color: #1d1d1f; background-color: #fff; outline: none; transition: border-color 0.2s; }
+    .scan-input:focus { border-color: #93c01f; box-shadow: 0 0 0 3px rgba(147, 192, 31, 0.2); }
+    .scan-status { text-align: center; font-size: 16px; color: #1d1d1f; margin-top: 16px; }
+    .scan-status .accent { color: #93c01f; font-weight: 500; }
+    .table-container { background-color: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); overflow-x: auto; margin-top: 24px; border: 1px solid #d2d2d7; }
+    table { width: 100%; border-collapse: collapse; }
+    th { background-color: #f5f5f7; color: #6e6e73; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 12px 16px; text-align: left; }
+    td { padding: 12px 16px; border-top: 1px solid #d2d2d7; font-size: 14px; color: #1d1d1f; }
+    tr.matched { background-color: #e6f3d8; }
+    .no-data { text-align: center; color: #6e6e73; padding: 16px; font-size: 16px; }
   </style>
 </head>
 <body>
@@ -133,26 +38,58 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
   <script>
-    // Precompiled JavaScript (JSX transpiled to JS)
     const { createRoot } = ReactDOM;
     const root = createRoot(document.getElementById('root'));
 
-    // Defining audio files for feedback
-    const positiveSound = new Audio('/sounds/positive.mp3');
-    const negativeSound = new Audio('/sounds/negative.mp3');
-    const confirmSound = new Audio('/sounds/confirm.mp3');
+    // Audiofeedback – mit Autoplay-Unlock und Fallback
+    const sounds = {
+      positive: new Audio('sounds/positive.mp3'),
+      negative: new Audio('sounds/negative.mp3'),
+      confirm: new Audio('sounds/confirm.mp3'),
+    };
+    Object.values(sounds).forEach(a => { try { a.preload = 'auto'; a.load(); } catch(_) {} });
 
-    // Defining the main App component
+    let audioUnlocked = false;
+    function unlockAudioOnce() {
+      if (audioUnlocked) return;
+      audioUnlocked = true;
+      // Versuche jedes Audio lautlos anzuspielen, damit Browser die Wiedergabe erlauben
+      Object.values(sounds).forEach(a => {
+        try {
+          a.muted = true;
+          const p = a.play();
+          if (p && typeof p.then === 'function') {
+            p.then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => {});
+          }
+        } catch(_) {}
+      });
+    }
+
+    function playSound(name) {
+      const a = sounds[name];
+      if (!a) return;
+      try { a.currentTime = 0; a.play().catch(() => {}); } catch(_) {}
+      // Optional haptisches Feedback, falls verfügbar
+      if (navigator.vibrate) { try { navigator.vibrate(name === 'negative' ? 120 : 60); } catch(_) {} }
+    }
+
+    function toStringSafe(v){
+      if (v === null || v === undefined) return '';
+      // PapaParse liefert Strings; falls Zahlen ankommen, in string ohne Nachkommastellen wandeln
+      if (typeof v === 'number') return String(Math.trunc(v));
+      return String(v).trim();
+    }
+
     function App() {
       const [data, setData] = React.useState([]);
       const [currentScan, setCurrentScan] = React.useState(null);
       const [scanMode, setScanMode] = React.useState('package');
-      const [matchedRows, setMatchedRows] = React.useState(new Set());
+      const [matchedRows, setMatchedRows] = React.useState(new Set()); // indexe, die komplett abgeschlossen sind
       const [error, setError] = React.useState(null);
       const [scanInput, setScanInput] = React.useState('');
       const inputRef = React.useRef(null);
 
-      // Handling CSV file upload
+      // CSV Upload
       const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
@@ -160,7 +97,7 @@
             header: true,
             skipEmptyLines: true,
             transformHeader: (header) => header.trim().replace(/^"|"$/g, ''),
-            transform: (value, header) => value.trim().replace(/^"|"$/g, ''),
+            transform: (value, header) => (value ?? '').toString().trim().replace(/^"|"$/g, ''),
             complete: (results) => {
               const filteredData = results.data.filter(row => row['OrderItem.orderItemName'] !== 'Versandkosten');
               setData(filteredData);
@@ -172,7 +109,7 @@
         }
       };
 
-      // Handling scan input
+      // Eingabe per Scanner/Tastatur
       const handleScanInput = (e) => {
         if (e.key === 'Enter' && scanInput) {
           handleScan(scanInput.trim());
@@ -182,53 +119,77 @@
         }
       };
 
-      // Handling scanned barcode
+      // Scan-Logik
       const handleScan = (scannedValue) => {
         setError(null);
+        const code = toStringSafe(scannedValue);
+
         if (scanMode === 'package') {
-          const matchingRow = data.find(row => row['ShippingPackages.packageNumber'] === scannedValue);
-          if (matchingRow) {
+          const matchingIndex = data.findIndex(row => toStringSafe(row['ShippingPackages.packageNumber']) === code);
+          if (matchingIndex !== -1) {
+            const row = data[matchingIndex];
+            const qtyRaw = row['OrderItem.quantity'];
+            const qty = Math.max(1, parseInt(qtyRaw, 10) || 1);
+            const expectedBarcode = toStringSafe(row['VariationBarcode.code']);
+
             setCurrentScan({
-              packageNumber: scannedValue,
-              expectedBarcode: matchingRow['VariationBarcode.code'],
-              rowIndex: data.indexOf(matchingRow),
-              name: `${matchingRow['DeliveryAddress.firstName']} ${matchingRow['DeliveryAddress.lastName']}`,
-              itemName: matchingRow['OrderItem.orderItemName'],
+              packageNumber: code,
+              expectedBarcode,
+              rowIndex: matchingIndex,
+              name: `${row['DeliveryAddress.firstName']} ${row['DeliveryAddress.lastName']}`,
+              itemName: row['OrderItem.orderItemName'],
+              qtyRequired: qty,
+              qtyRemaining: qty,
+              scanned: []
             });
             setScanMode('barcode');
-            positiveSound.play(); // Positiver Sound bei erfolgreichem Paketnummer-Scan
+            playSound('positive');
           } else {
-            negativeSound.play();
+            playSound('negative');
             setError('Paketnummer nicht gefunden!');
             setCurrentScan(null);
             setScanMode('package');
           }
-        } else { // scanMode === 'barcode'
-          if (scannedValue === currentScan.expectedBarcode) {
-            setMatchedRows(prev => new Set([...prev, currentScan.rowIndex]));
-            confirmSound.play(); // Bestätigungssound bei erfolgreichem Barcode-Match
-            setCurrentScan(null);
-            setScanMode('package');
+        } else { // Barcode-Modus
+          if (!currentScan) return;
+          const expected = toStringSafe(currentScan.expectedBarcode);
+
+          if (code === expected && expected) {
+            const nextRemaining = currentScan.qtyRemaining - 1;
+            const nextScanned = [...currentScan.scanned, code];
+
+            if (nextRemaining > 0) {
+              // noch weitere EANs nötig (z.B. Stückzahl 2)
+              setCurrentScan({ ...currentScan, qtyRemaining: nextRemaining, scanned: nextScanned });
+              // kurzer positiver Ton zur Bestätigung jedes Teil-Treffers
+              playSound('positive');
+            } else {
+              // vollständig abgeschlossen
+              setMatchedRows(prev => new Set([...prev, currentScan.rowIndex]));
+              playSound('confirm');
+              setCurrentScan(null);
+              setScanMode('package');
+            }
           } else {
-            negativeSound.play();
+            playSound('negative');
             setError('Barcode stimmt nicht überein!');
             setCurrentScan(null);
             setScanMode('package');
           }
         }
+
         if (inputRef.current) {
           inputRef.current.focus();
         }
       };
 
-      // Focusing the input field on component mount
+      // Autofokus
       React.useEffect(() => {
         if (inputRef.current) {
           inputRef.current.focus();
         }
       }, []);
 
-      // Rendering the table
       const renderTable = () => {
         if (data.length === 0) {
           return React.createElement('p', { className: 'no-data' }, 'Keine Daten hochgeladen. Bitte laden Sie eine CSV-Datei hoch.');
@@ -242,6 +203,7 @@
                 React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Paketnummer'),
                 React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Name'),
                 React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Artikelname'),
+                React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Menge'),
               ]),
             ]),
             React.createElement('tbody', null, data.map((row, index) =>
@@ -250,17 +212,17 @@
                 className: matchedRows.has(index) ? 'matched' : ''
               }, [
                 React.createElement('td', { className: 'py-2 px-4' }, row['Order.id']),
-                React.createElement('td', { className: 'py-2 px-4' }, row['VariationBarcode.code'] || 'N/A'),
-                React.createElement('td', { className: 'py-2 px-4' }, row['ShippingPackages.packageNumber']),
+                React.createElement('td', { className: 'py-2 px-4' }, toStringSafe(row['VariationBarcode.code']) || 'N/A'),
+                React.createElement('td', { className: 'py-2 px-4' }, toStringSafe(row['ShippingPackages.packageNumber'])),
                 React.createElement('td', { className: 'py-2 px-4' }, `${row['DeliveryAddress.firstName']} ${row['DeliveryAddress.lastName']}`),
                 React.createElement('td', { className: 'py-2 px-4' }, row['OrderItem.orderItemName']),
+                React.createElement('td', { className: 'py-2 px-4' }, parseInt(row['OrderItem.quantity'], 10) || 1),
               ])
             ))
           ])
         ]);
       };
 
-      // Rendering the current scan display
       const renderCurrentScan = () => {
         if (!currentScan) {
           return React.createElement('p', { className: 'scan-status' }, [
@@ -268,6 +230,7 @@
             React.createElement('span', { className: 'accent' }, 'Paketnummer')
           ]);
         }
+        const already = currentScan.qtyRequired - currentScan.qtyRemaining;
         return React.createElement('div', { className: 'scan-status' }, [
           React.createElement('p', null, [
             'Gescannte Paketnummer: ',
@@ -287,29 +250,26 @@
           ]),
           React.createElement('p', { className: 'mt-2' }, [
             'Bitte scannen Sie den ',
-            React.createElement('span', { className: 'accent' }, 'Barcode')
-          ])
+            React.createElement('span', { className: 'accent' }, 'Barcode'),
+            ` – noch ${currentScan.qtyRemaining} von ${currentScan.qtyRequired}`
+          ]),
+          already > 0 && React.createElement('p', null, `Bereits korrekt gescannt: ${already}`)
         ]);
       };
 
-      // Rendering the main UI
       return React.createElement('div', { className: 'container' }, [
         React.createElement('h1', null, 'Speditions Scanner'),
         error && React.createElement('div', { className: 'error' }, error),
         React.createElement('div', { className: 'mb-6' }, [
           React.createElement('label', { className: 'file-input-label' }, 'CSV-Datei hochladen'),
           React.createElement('input', {
-            type: 'file',
-            accept: '.csv',
-            onChange: handleFileUpload,
-            className: 'file-input'
+            type: 'file', accept: '.csv', onChange: handleFileUpload, className: 'file-input'
           })
         ]),
         React.createElement('div', { className: 'mb-6' }, [
           React.createElement('label', { className: 'file-input-label' }, 'Barcode scannen'),
           React.createElement('input', {
-            type: 'text',
-            value: scanInput,
+            type: 'text', value: scanInput,
             onChange: (e) => setScanInput(e.target.value),
             onKeyDown: handleScanInput,
             ref: inputRef,
@@ -322,10 +282,12 @@
       ]);
     }
 
-    // Rendering the App component
     root.render(React.createElement(App));
 
-    // Register the service worker
+    // Audio in Browsern (iOS/Android/Chrome) beim ersten User-Gesten-Ereignis freischalten
+    window.addEventListener('pointerdown', unlockAudioOnce, { once: true });
+    window.addEventListener('keydown', unlockAudioOnce, { once: true });
+
     if ('serviceWorker' in navigator) {
       window.addEventListener('load', () => {
         navigator.serviceWorker.register('/service-worker.js')
