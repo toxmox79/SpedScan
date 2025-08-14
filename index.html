@@ -6,34 +6,27 @@
   <title>Speditions Scanner</title>
   <link rel="manifest" href="/manifest.json">
   <style>
-    body {
-      background-color: #f5f5f7;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-      margin: 0;
-      padding: 0;
-    }
-    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
-    h1 { font-size: 32px; font-weight: 600; color: #1d1d1f; text-align: center; margin-bottom: 24px; }
-    .error { background-color: #fee2e2; color: #dc2626; padding: 16px; border-radius: 12px; text-align: center; margin-bottom: 16px; }
-    .file-input-label { display: block; color: #1d1d1f; font-size: 16px; font-weight: 500; margin-bottom: 8px; }
-    .file-input { display: block; width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 12px; background-color: #fff; font-size: 16px; color: #1d1d1f; cursor: pointer; }
-    .file-input::-webkit-file-upload-button { background-color: #93c01f; color: #fff; border: none; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
-    .file-input::-webkit-file-upload-button:hover { background-color: #7aa01a; }
-    .scan-input { width: 100%; padding: 12px; border: 1px solid #d2d2d7; border-radius: 12px; font-size: 16px; color: #1d1d1f; background-color: #fff; outline: none; transition: border-color 0.2s; }
-    .scan-input:focus { border-color: #93c01f; box-shadow: 0 0 0 3px rgba(147, 192, 31, 0.2); }
-    .scan-status { text-align: center; font-size: 16px; color: #1d1d1f; margin-top: 16px; }
-    .scan-status .accent { color: #93c01f; font-weight: 500; }
-    .table-container { background-color: #fff; border-radius: 12px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); overflow-x: auto; margin-top: 24px; border: 1px solid #d2d2d7; }
+    body { background-color: #f5f5f7; font-family: Arial, sans-serif; margin: 0; padding: 0; }
+    .container { max-width: 960px; margin: 0 auto; padding: 20px; }
+    h1 { text-align: center; margin-bottom: 20px; }
+    .error { background: #fee; color: #900; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
+    label { font-weight: bold; display: block; margin: 10px 0 5px; }
+    input[type=file], .scan-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
+    .scan-status { text-align: center; margin-top: 15px; font-size: 14px; }
+    .scan-status .accent { color: #2a7a1f; font-weight: bold; }
+    .table-container { background: white; border-radius: 8px; margin-top: 20px; overflow-x: auto; border: 1px solid #ccc; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
     table { width: 100%; border-collapse: collapse; }
-    th { background-color: #f5f5f7; color: #6e6e73; font-size: 12px; font-weight: 600; text-transform: uppercase; padding: 12px 16px; text-align: left; }
-    td { padding: 12px 16px; border-top: 1px solid #d2d2d7; font-size: 14px; color: #1d1d1f; }
-    tr.matched { background-color: #e6f3d8; }
-    .no-data { text-align: center; color: #6e6e73; padding: 16px; font-size: 16px; }
+    th, td { padding: 10px; border-bottom: 1px solid #ccc; text-align: left; }
+    th { background: #f0f0f0; }
+    tr.matched { background: #d4f7d4; }
+    .no-data { text-align: center; padding: 20px; }
+    .status-panel { background:#f1f3f5; border:1px solid #d2d2d7; border-radius:12px; padding:16px; margin-top:12px; }
+    .file-input::file-selector-button { background-color: #93c01f; color: #fff; border: none; padding: 8px 16px; border-radius: 9999px; font-size: 14px; font-weight: 600; cursor: pointer; margin-right: 12px; }
+    .file-input::file-selector-button:hover { filter: brightness(0.95); }
   </style>
 </head>
 <body>
-  <div id="root"></div>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+  <div id="root" class="container"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://unpkg.com/papaparse@latest/papaparse.min.js"></script>
@@ -41,19 +34,16 @@
     const { createRoot } = ReactDOM;
     const root = createRoot(document.getElementById('root'));
 
-    // Audiofeedback – mit Autoplay-Unlock und Fallback
     const sounds = {
       positive: new Audio('sounds/positive.mp3'),
       negative: new Audio('sounds/negative.mp3'),
       confirm: new Audio('sounds/confirm.mp3'),
     };
     Object.values(sounds).forEach(a => { try { a.preload = 'auto'; a.load(); } catch(_) {} });
-
     let audioUnlocked = false;
     function unlockAudioOnce() {
       if (audioUnlocked) return;
       audioUnlocked = true;
-      // Versuche jedes Audio lautlos anzuspielen, damit Browser die Wiedergabe erlauben
       Object.values(sounds).forEach(a => {
         try {
           a.muted = true;
@@ -64,18 +54,14 @@
         } catch(_) {}
       });
     }
-
     function playSound(name) {
       const a = sounds[name];
       if (!a) return;
       try { a.currentTime = 0; a.play().catch(() => {}); } catch(_) {}
-      // Optional haptisches Feedback, falls verfügbar
-      if (navigator.vibrate) { try { navigator.vibrate(name === 'negative' ? 120 : 60); } catch(_) {} }
     }
 
     function toStringSafe(v){
       if (v === null || v === undefined) return '';
-      // PapaParse liefert Strings; falls Zahlen ankommen, in string ohne Nachkommastellen wandeln
       if (typeof v === 'number') return String(Math.trunc(v));
       return String(v).trim();
     }
@@ -84,12 +70,11 @@
       const [data, setData] = React.useState([]);
       const [currentScan, setCurrentScan] = React.useState(null);
       const [scanMode, setScanMode] = React.useState('package');
-      const [matchedRows, setMatchedRows] = React.useState(new Set()); // indexe, die komplett abgeschlossen sind
+      const [matchedRows, setMatchedRows] = React.useState(new Set());
       const [error, setError] = React.useState(null);
       const [scanInput, setScanInput] = React.useState('');
       const inputRef = React.useRef(null);
 
-      // CSV Upload
       const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
@@ -97,7 +82,7 @@
             header: true,
             skipEmptyLines: true,
             transformHeader: (header) => header.trim().replace(/^"|"$/g, ''),
-            transform: (value, header) => (value ?? '').toString().trim().replace(/^"|"$/g, ''),
+            transform: (value) => (value ?? '').toString().trim().replace(/^"|"$/g, ''),
             complete: (results) => {
               const filteredData = results.data.filter(row => row['OrderItem.orderItemName'] !== 'Versandkosten');
               setData(filteredData);
@@ -109,7 +94,6 @@
         }
       };
 
-      // Eingabe per Scanner/Tastatur
       const handleScanInput = (e) => {
         if (e.key === 'Enter' && scanInput) {
           handleScan(scanInput.trim());
@@ -119,104 +103,118 @@
         }
       };
 
-      // Scan-Logik
       const handleScan = (scannedValue) => {
         setError(null);
         const code = toStringSafe(scannedValue);
 
         if (scanMode === 'package') {
-          const matchingIndex = data.findIndex(row => toStringSafe(row['ShippingPackages.packageNumber']) === code);
-          if (matchingIndex !== -1) {
-            const row = data[matchingIndex];
-            const qtyRaw = row['OrderItem.quantity'];
-            const qty = Math.max(1, parseInt(qtyRaw, 10) || 1);
-            const expectedBarcode = toStringSafe(row['VariationBarcode.code']);
+          const groupIndexes = data
+            .map((row, idx) => ({ idx, row }))
+            .filter(({ row }) => toStringSafe(row['ShippingPackages.packageNumber']) === code)
+            .map(({ idx }) => idx);
 
-            setCurrentScan({
-              packageNumber: code,
-              expectedBarcode,
-              rowIndex: matchingIndex,
-              name: `${row['DeliveryAddress.firstName']} ${row['DeliveryAddress.lastName']}`,
-              itemName: row['OrderItem.orderItemName'],
-              qtyRequired: qty,
-              qtyRemaining: qty,
-              scanned: []
-            });
-            setScanMode('barcode');
-            playSound('positive');
-          } else {
+          if (groupIndexes.length === 0) {
             playSound('negative');
             setError('Paketnummer nicht gefunden!');
             setCurrentScan(null);
             setScanMode('package');
+          } else {
+            const items = groupIndexes.map(i => {
+              const r = data[i];
+              const qty = Math.max(1, parseInt(r['OrderItem.quantity'], 10) || 1);
+              return {
+                rowIndex: i,
+                expectedBarcode: toStringSafe(r['VariationBarcode.code']),
+                qtyRequired: qty,
+                qtyRemaining: qty,
+                name: `${r['DeliveryAddress.firstName']} ${r['DeliveryAddress.lastName']}`,
+                itemName: r['OrderItem.orderItemName']
+              };
+            });
+
+            const byBarcode = {};
+            for (const it of items) {
+              const key = it.expectedBarcode;
+              if (!key) continue;
+              byBarcode[key] = (byBarcode[key] || 0) + it.qtyRequired;
+            }
+
+            const totalRequired = items.reduce((s, it) => s + it.qtyRequired, 0);
+
+            setCurrentScan({
+              packageNumber: code,
+              items,
+              byBarcode,
+              totalRequired,
+              totalRemaining: totalRequired,
+            });
+            setScanMode('barcode');
+            playSound('positive');
           }
-        } else { // Barcode-Modus
+        } else {
           if (!currentScan) return;
-          const expected = toStringSafe(currentScan.expectedBarcode);
+          const groups = { ...currentScan.byBarcode };
+          const remainingForCode = groups[code] || 0;
 
-          if (code === expected && expected) {
-            const nextRemaining = currentScan.qtyRemaining - 1;
-            const nextScanned = [...currentScan.scanned, code];
+          if (remainingForCode > 0) {
+            groups[code] = remainingForCode - 1;
 
-            if (nextRemaining > 0) {
-              // noch weitere EANs nötig (z.B. Stückzahl 2)
-              setCurrentScan({ ...currentScan, qtyRemaining: nextRemaining, scanned: nextScanned });
-              // kurzer positiver Ton zur Bestätigung jedes Teil-Treffers
+            const items = currentScan.items.map(it => {
+              if (it.expectedBarcode === code && it.qtyRemaining > 0) {
+                return { ...it, qtyRemaining: it.qtyRemaining - 1 };
+              }
+              return it;
+            });
+
+            const totalRemaining = currentScan.totalRemaining - 1;
+
+            if (totalRemaining > 0) {
+              setCurrentScan({ ...currentScan, byBarcode: groups, items, totalRemaining });
               playSound('positive');
             } else {
-              // vollständig abgeschlossen
-              setMatchedRows(prev => new Set([...prev, currentScan.rowIndex]));
+              const allIdx = items.map(it => it.rowIndex);
+              setMatchedRows(prev => new Set([...prev, ...allIdx]));
               playSound('confirm');
               setCurrentScan(null);
               setScanMode('package');
             }
           } else {
             playSound('negative');
-            setError('Barcode stimmt nicht überein!');
+            setError('Falscher Barcode. Bitte erneut die Paketnummer scannen.');
             setCurrentScan(null);
             setScanMode('package');
           }
         }
 
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
+        if (inputRef.current) inputRef.current.focus();
       };
 
-      // Autofokus
-      React.useEffect(() => {
-        if (inputRef.current) {
-          inputRef.current.focus();
-        }
-      }, []);
+      React.useEffect(() => { if (inputRef.current) inputRef.current.focus(); }, []);
 
       const renderTable = () => {
         if (data.length === 0) {
-          return React.createElement('p', { className: 'no-data' }, 'Keine Daten hochgeladen. Bitte laden Sie eine CSV-Datei hoch.');
+          return React.createElement('p', { className: 'no-data' }, 'Keine Daten hochgeladen.');
         }
         return React.createElement('div', { className: 'table-container' }, [
           React.createElement('table', null, [
             React.createElement('thead', null, [
               React.createElement('tr', null, [
-                React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Bestell-ID'),
-                React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Barcode'),
-                React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Paketnummer'),
-                React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Name'),
-                React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Artikelname'),
-                React.createElement('th', { className: 'py-3 px-6 text-left' }, 'Menge'),
+                React.createElement('th', null, 'BESTELL-ID'),
+                React.createElement('th', null, 'BARCODE'),
+                React.createElement('th', null, 'PAKETNUMMER'),
+                React.createElement('th', null, 'NAME'),
+                React.createElement('th', null, 'ARTIKELNAME'),
+                React.createElement('th', null, 'MENGE'),
               ]),
             ]),
             React.createElement('tbody', null, data.map((row, index) =>
-              React.createElement('tr', {
-                key: index,
-                className: matchedRows.has(index) ? 'matched' : ''
-              }, [
-                React.createElement('td', { className: 'py-2 px-4' }, row['Order.id']),
-                React.createElement('td', { className: 'py-2 px-4' }, toStringSafe(row['VariationBarcode.code']) || 'N/A'),
-                React.createElement('td', { className: 'py-2 px-4' }, toStringSafe(row['ShippingPackages.packageNumber'])),
-                React.createElement('td', { className: 'py-2 px-4' }, `${row['DeliveryAddress.firstName']} ${row['DeliveryAddress.lastName']}`),
-                React.createElement('td', { className: 'py-2 px-4' }, row['OrderItem.orderItemName']),
-                React.createElement('td', { className: 'py-2 px-4' }, parseInt(row['OrderItem.quantity'], 10) || 1),
+              React.createElement('tr', { key: index, className: matchedRows.has(index) ? 'matched' : '' }, [
+                React.createElement('td', null, row['Order.id']),
+                React.createElement('td', null, toStringSafe(row['VariationBarcode.code'])),
+                React.createElement('td', null, toStringSafe(row['ShippingPackages.packageNumber'])),
+                React.createElement('td', null, `${row['DeliveryAddress.firstName']} ${row['DeliveryAddress.lastName']}`),
+                React.createElement('td', null, row['OrderItem.orderItemName']),
+                React.createElement('td', null, parseInt(row['OrderItem.quantity'], 10) || 1),
               ])
             ))
           ])
@@ -225,80 +223,39 @@
 
       const renderCurrentScan = () => {
         if (!currentScan) {
-          return React.createElement('p', { className: 'scan-status' }, [
-            'Scannen Sie eine ',
-            React.createElement('span', { className: 'accent' }, 'Paketnummer')
-          ]);
+          return React.createElement('p', { className: 'scan-status' }, ['Scannen Sie eine ', React.createElement('span', { className: 'accent' }, 'Paketnummer')]);
         }
-        const already = currentScan.qtyRequired - currentScan.qtyRemaining;
-        return React.createElement('div', { className: 'scan-status' }, [
-          React.createElement('p', null, [
-            'Gescannte Paketnummer: ',
-            React.createElement('span', { className: 'accent' }, currentScan.packageNumber)
-          ]),
-          React.createElement('p', null, [
-            'Name: ',
-            React.createElement('span', { className: 'accent' }, currentScan.name)
-          ]),
-          React.createElement('p', null, [
-            'Artikelname: ',
-            React.createElement('span', { className: 'accent' }, currentScan.itemName)
-          ]),
-          React.createElement('p', null, [
-            'Barcode: ',
-            React.createElement('span', { className: 'accent' }, currentScan.expectedBarcode || 'N/A')
-          ]),
-          React.createElement('p', { className: 'mt-2' }, [
-            'Bitte scannen Sie den ',
-            React.createElement('span', { className: 'accent' }, 'Barcode'),
-            ` – noch ${currentScan.qtyRemaining} von ${currentScan.qtyRequired}`
-          ]),
-          already > 0 && React.createElement('p', null, `Bereits korrekt gescannt: ${already}`)
+        const barcodeList = Object.entries(currentScan.byBarcode)
+          .sort((a,b) => a[0].localeCompare(b[0]))
+          .map(([ean, count]) => React.createElement('li', { key: ean }, `${ean || 'N/A'} – noch ${count}`));
+        const itemLines = currentScan.items.map((it, idx) =>
+          React.createElement('li', { key: idx }, `${it.itemName} (${it.expectedBarcode || 'N/A'}): ${it.qtyRequired - it.qtyRemaining}/${it.qtyRequired} gescannt`)
+        );
+        return React.createElement('div', { className: 'status-panel' }, [
+          React.createElement('div', { className: 'scan-status' }, [
+            React.createElement('p', null, ['Gescannte Paketnummer: ', React.createElement('span', { className: 'accent' }, currentScan.packageNumber)]),
+            React.createElement('p', null, `Gesamt noch: ${currentScan.totalRemaining} von ${currentScan.totalRequired}`),
+            React.createElement('p', null, 'Benötigte EANs:'),
+            React.createElement('ul', null, barcodeList),
+            React.createElement('p', null, 'Positionen:'),
+            React.createElement('ul', null, itemLines),
+            React.createElement('p', { className: 'mt-2' }, ['Bitte scannen Sie die ', React.createElement('span', { className: 'accent' }, 'zugehörigen EANs'), ' der Positionen.'])
+          ])
         ]);
       };
 
-      return React.createElement('div', { className: 'container' }, [
+      return React.createElement('div', null, [
         React.createElement('h1', null, 'Speditions Scanner'),
         error && React.createElement('div', { className: 'error' }, error),
-        React.createElement('div', { className: 'mb-6' }, [
-          React.createElement('label', { className: 'file-input-label' }, 'CSV-Datei hochladen'),
-          React.createElement('input', {
-            type: 'file', accept: '.csv', onChange: handleFileUpload, className: 'file-input'
-          })
-        ]),
-        React.createElement('div', { className: 'mb-6' }, [
-          React.createElement('label', { className: 'file-input-label' }, 'Barcode scannen'),
-          React.createElement('input', {
-            type: 'text', value: scanInput,
-            onChange: (e) => setScanInput(e.target.value),
-            onKeyDown: handleScanInput,
-            ref: inputRef,
-            placeholder: scanMode === 'package' ? 'Paketnummer scannen' : 'Barcode scannen',
-            className: 'scan-input'
-          }),
-          React.createElement('div', null, renderCurrentScan())
-        ]),
-        React.createElement('div', { className: 'mt-6' }, renderTable())
+        React.createElement('div', null, [React.createElement('label', null, 'CSV-Datei hochladen'), React.createElement('input', { type: 'file', accept: '.csv', onChange: handleFileUpload, className: 'file-input' })]),
+        React.createElement('div', null, [React.createElement('label', null, 'Barcode scannen'), React.createElement('input', { type: 'text', value: scanInput, onChange: (e) => setScanInput(e.target.value), onKeyDown: handleScanInput, ref: inputRef, placeholder: scanMode === 'package' ? 'Paketnummer scannen' : 'Barcode scannen', className: 'scan-input' }), renderCurrentScan()]),
+        renderTable()
       ]);
     }
 
     root.render(React.createElement(App));
-
-    // Audio in Browsern (iOS/Android/Chrome) beim ersten User-Gesten-Ereignis freischalten
     window.addEventListener('pointerdown', unlockAudioOnce, { once: true });
     window.addEventListener('keydown', unlockAudioOnce, { once: true });
-
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js')
-          .then(registration => {
-            console.log('ServiceWorker registration successful with scope: ', registration.scope);
-          })
-          .catch(err => {
-            console.log('ServiceWorker registration failed: ', err);
-          });
-      });
-    }
   </script>
 </body>
 </html>
