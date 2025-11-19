@@ -359,7 +359,7 @@
         React.createElement('h1', null, 'Speditions Scanner'),
         error && React.createElement('div', { className: 'error' }, error),
         React.createElement('div', null, [React.createElement('label', null, 'CSV-Datei hochladen'), React.createElement('input', { type: 'file', accept: '.csv', onChange: handleFileUpload, className: 'file-input' })]),
-        React.createElement('div', null, [React.createElement('label', null, 'Barcode scannen'), React.createElement('input', { type: 'text', value: scanInput, onChange: (e) => setScanInput(e.target.value), onKeyDown: handleScanInput, ref: inputRef, placeholder: scanMode === 'package' ? 'Paketnummer scannen' : 'Barcode scannen', className: 'scan-input' }), renderCurrentScan()]),
+        React.createElement('div', null, [React.createElement('label', null, uploadedFileName.toLowerCase().includes('geis') ? 'Geis Barcode scannen' : 'Barcode scannen'), React.createElement('input', { type: 'text', value: scanInput, onChange: (e) => setScanInput(e.target.value), onKeyDown: handleScanInput, ref: inputRef, placeholder: scanMode === 'package' ? 'Paketnummer scannen' : (uploadedFileName.toLowerCase().includes('geis') ? 'Geis Barcode scannen' : 'Barcode scannen'), className: 'scan-input' }), renderCurrentScan()]),
         renderTable()
       ]);
     }
