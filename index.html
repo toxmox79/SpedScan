@@ -1,30 +1,125 @@
 <!DOCTYPE html>
 <html lang="de">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Speditions Scanner</title>
   <link rel="manifest" href="/manifest.json">
   <style>
-    body { background-color: #f5f5f7; font-family: Arial, sans-serif; margin: 0; padding: 0; }
-    .container { max-width: 960px; margin: 0 auto; padding: 20px; }
-    h1 { text-align: center; margin-bottom: 20px; }
-    .error { background: #fee; color: #900; padding: 10px; border-radius: 8px; text-align: center; margin-bottom: 10px; }
-    label { font-weight: bold; display: block; margin: 10px 0 5px; }
-    input[type=file], .scan-input { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; }
-    .scan-status { text-align: center; margin-top: 15px; font-size: 14px; }
-    .scan-status .accent { color: #2a7a1f; font-weight: bold; }
-    .table-container { background: white; border-radius: 8px; margin-top: 20px; overflow-x: auto; border: 1px solid #ccc; box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-    table { width: 100%; border-collapse: collapse; }
-    th, td { padding: 10px; border-bottom: 1px solid #ccc; text-align: left; }
-    th { background: #f0f0f0; }
-    tr.matched { background: #d4f7d4; }
-    .no-data { text-align: center; padding: 20px; }
-    .status-panel { background:#f1f3f5; border:1px solid #d2d2d7; border-radius:12px; padding:16px; margin-top:12px; }
-    .file-input::file-selector-button { background-color: #93c01f; color: #fff; border: none; padding: 8px 16px; border-radius: 9999px; font-size: 14px; font-weight: 600; cursor: pointer; margin-right: 12px; }
-    .file-input::file-selector-button:hover { filter: brightness(0.95); }
+    body {
+      background-color: #f5f5f7;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .error {
+      background: #fee;
+      color: #900;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      margin-bottom: 10px;
+    }
+
+    label {
+      font-weight: bold;
+      display: block;
+      margin: 10px 0 5px;
+    }
+
+    input[type=file],
+    .scan-input {
+      width: 100%;
+      padding: 10px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      font-size: 14px;
+    }
+
+    .scan-status {
+      text-align: center;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    .scan-status .accent {
+      color: #2a7a1f;
+      font-weight: bold;
+    }
+
+    .table-container {
+      background: white;
+      border-radius: 8px;
+      margin-top: 20px;
+      overflow-x: auto;
+      border: 1px solid #ccc;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th,
+    td {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
+      text-align: left;
+    }
+
+    th {
+      background: #f0f0f0;
+    }
+
+    tr.matched {
+      background: #d4f7d4;
+    }
+
+    .no-data {
+      text-align: center;
+      padding: 20px;
+    }
+
+    .status-panel {
+      background: #f1f3f5;
+      border: 1px solid #d2d2d7;
+      border-radius: 12px;
+      padding: 16px;
+      margin-top: 12px;
+    }
+
+    .file-input::file-selector-button {
+      background-color: #93c01f;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 9999px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      margin-right: 12px;
+    }
+
+    .file-input::file-selector-button:hover {
+      filter: brightness(0.95);
+    }
   </style>
 </head>
+
 <body>
   <div id="root" class="container"></div>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
@@ -39,7 +134,7 @@
       negative: new Audio('sounds/negative.mp3'),
       confirm: new Audio('sounds/confirm.mp3'),
     };
-    Object.values(sounds).forEach(a => { try { a.preload = 'auto'; a.load(); } catch(_) {} });
+    Object.values(sounds).forEach(a => { try { a.preload = 'auto'; a.load(); } catch (_) { } });
     let audioUnlocked = false;
     function unlockAudioOnce() {
       if (audioUnlocked) return;
@@ -49,21 +144,31 @@
           a.muted = true;
           const p = a.play();
           if (p && typeof p.then === 'function') {
-            p.then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => {});
+            p.then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { });
           }
-        } catch(_) {}
+        } catch (_) { }
       });
     }
     function playSound(name) {
       const a = sounds[name];
       if (!a) return;
-      try { a.currentTime = 0; a.play().catch(() => {}); } catch(_) {}
+      try { a.currentTime = 0; a.play().catch(() => { }); } catch (_) { }
     }
 
-    function toStringSafe(v){
+    function toStringSafe(v) {
       if (v === null || v === undefined) return '';
       if (typeof v === 'number') return String(Math.trunc(v));
       return String(v).trim();
+    }
+
+    function normalizePackageNumber(packageNumber, fileName) {
+      const pkgStr = toStringSafe(packageNumber);
+      if (!fileName) return pkgStr;
+      const isGeis = fileName.toLowerCase().includes('geis');
+      if (isGeis && pkgStr.length > 3) {
+        return pkgStr.slice(0, -3);
+      }
+      return pkgStr;
     }
 
     function App() {
@@ -73,11 +178,13 @@
       const [matchedRows, setMatchedRows] = React.useState(new Set());
       const [error, setError] = React.useState(null);
       const [scanInput, setScanInput] = React.useState('');
+      const [uploadedFileName, setUploadedFileName] = React.useState('');
       const inputRef = React.useRef(null);
 
       const handleFileUpload = (event) => {
         const file = event.target.files[0];
         if (file) {
+          setUploadedFileName(file.name);
           Papa.parse(file, {
             header: true,
             skipEmptyLines: true,
@@ -106,11 +213,15 @@
       const handleScan = (scannedValue) => {
         setError(null);
         const code = toStringSafe(scannedValue);
+        const normalizedScannedCode = normalizePackageNumber(code, uploadedFileName);
 
         if (scanMode === 'package') {
           const groupIndexes = data
             .map((row, idx) => ({ idx, row }))
-            .filter(({ row }) => toStringSafe(row['ShippingPackages.packageNumber']) === code)
+            .filter(({ row }) => {
+              const csvPackageNumber = toStringSafe(row['ShippingPackages.packageNumber']);
+              return csvPackageNumber === normalizedScannedCode;
+            })
             .map(({ idx }) => idx);
 
           if (groupIndexes.length === 0) {
@@ -226,7 +337,7 @@
           return React.createElement('p', { className: 'scan-status' }, ['Scannen Sie eine ', React.createElement('span', { className: 'accent' }, 'Paketnummer')]);
         }
         const barcodeList = Object.entries(currentScan.byBarcode)
-          .sort((a,b) => a[0].localeCompare(b[0]))
+          .sort((a, b) => a[0].localeCompare(b[0]))
           .map(([ean, count]) => React.createElement('li', { key: ean }, `${ean || 'N/A'} – noch ${count}`));
         const itemLines = currentScan.items.map((it, idx) =>
           React.createElement('li', { key: idx }, `${it.itemName} (${it.expectedBarcode || 'N/A'}): ${it.qtyRequired - it.qtyRemaining}/${it.qtyRequired} gescannt`)
@@ -258,4 +369,5 @@
     window.addEventListener('keydown', unlockAudioOnce, { once: true });
   </script>
 </body>
+
 </html>
