@@ -141,25 +141,87 @@
       negative: new Audio('sounds/negative.mp3'),
       confirm: new Audio('sounds/confirm.mp3'),
     };
-    Object.values(sounds).forEach(a => { try { a.preload = 'auto'; a.load(); } catch (_) { } });
+
+    // Konfiguriere Audio-Objekte für bessere Android-Kompatibilität
+    Object.values(sounds).forEach(a => {
+      try {
+        a.preload = 'auto';
+        a.volume = 1.0;
+        a.load();
+      } catch (e) {
+        console.warn('Audio preload error:', e);
+      }
+    });
+
     let audioUnlocked = false;
+    let unlockAttempts = 0;
+
     function unlockAudioOnce() {
       if (audioUnlocked) return;
-      audioUnlocked = true;
-      Object.values(sounds).forEach(a => {
-        try {
-          a.muted = true;
-          const p = a.play();
-          if (p && typeof p.then === 'function') {
-            p.then(() => { a.pause(); a.currentTime = 0; a.muted = false; }).catch(() => { });
+      unlockAttempts++;
+      console.log('Attempting to unlock audio, attempt:', unlockAttempts);
+
+      const unlockPromises = Object.values(sounds).map(a => {
+        return new Promise((resolve) => {
+          try {
+            a.muted = true;
+            a.volume = 0;
+            const p = a.play();
+            if (p && typeof p.then === 'function') {
+              p.then(() => {
+                a.pause();
+                a.currentTime = 0;
+                a.muted = false;
+                a.volume = 1.0;
+                console.log('Audio unlocked successfully');
+                resolve(true);
+              }).catch((err) => {
+                console.warn('Audio unlock failed:', err);
+                resolve(false);
+              });
+            } else {
+              a.pause();
+              a.currentTime = 0;
+              a.muted = false;
+              a.volume = 1.0;
+              resolve(true);
+            }
+          } catch (e) {
+            console.warn('Audio unlock exception:', e);
+            resolve(false);
           }
-        } catch (_) { }
+        });
+      });
+
+      Promise.all(unlockPromises).then((results) => {
+        if (results.some(r => r === true)) {
+          audioUnlocked = true;
+          console.log('Audio system unlocked');
+        }
       });
     }
+
     function playSound(name) {
       const a = sounds[name];
       if (!a) return;
-      try { a.currentTime = 0; a.play().catch(() => { }); } catch (_) { }
+
+      try {
+        a.currentTime = 0;
+        a.volume = 1.0;
+        const playPromise = a.play();
+
+        if (playPromise && typeof playPromise.then === 'function') {
+          playPromise.catch((error) => {
+            console.warn('Audio play error for', name, ':', error);
+            // Versuche Audio-Unlock erneut bei Fehler
+            if (!audioUnlocked) {
+              unlockAudioOnce();
+            }
+          });
+        }
+      } catch (e) {
+        console.warn('Audio play exception for', name, ':', e);
+      }
     }
 
     function toStringSafe(v) {
@@ -372,8 +434,16 @@
     }
 
     root.render(React.createElement(App));
+
+    // Mehrere Event-Listener für verschiedene Geräte und Interaktionstypen
+    window.addEventListener('touchstart', unlockAudioOnce, { once: true });
+    window.addEventListener('touchend', unlockAudioOnce, { once: true });
+    window.addEventListener('click', unlockAudioOnce, { once: true });
     window.addEventListener('pointerdown', unlockAudioOnce, { once: true });
     window.addEventListener('keydown', unlockAudioOnce, { once: true });
+
+    // Zusätzlicher Unlock-Versuch beim ersten Input-Focus
+    document.addEventListener('focusin', unlockAudioOnce, { once: true });
 
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
