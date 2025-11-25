@@ -274,15 +274,30 @@
       const [audioReady, setAudioReady] = React.useState(false);
       const inputRef = React.useRef(null);
 
-      const handleEnableAudio = async () => {
-        const success = await initAudio();
-        if (success) {
-          setAudioReady(true);
-          setError(null);
-        } else {
-          setError('Audio konnte nicht aktiviert werden. Bitte versuchen Sie es erneut.');
-        }
-      };
+      // Auto-unlock Audio bei erster User-Interaktion
+      React.useEffect(() => {
+        const tryUnlockAudio = async () => {
+          if (audioEnabled) return; // Bereits aktiviert
+          const success = await initAudio();
+          if (success) {
+            setAudioReady(true);
+            console.log('Audio auto-unlocked');
+          }
+        };
+
+        // Event-Listener für verschiedene Interaktionen
+        const events = ['click', 'touchstart', 'keydown'];
+        events.forEach(event => {
+          document.addEventListener(event, tryUnlockAudio, { once: true });
+        });
+
+        // Cleanup
+        return () => {
+          events.forEach(event => {
+            document.removeEventListener(event, tryUnlockAudio);
+          });
+        };
+      }, []);
 
       const handleFileUpload = (event) => {
         const file = event.target.files[0];
@@ -459,44 +474,13 @@
       };
 
       return React.createElement('div', null, [
-        React.createElement('h1', null, 'Speditions Scanner'),
-        !audioReady && React.createElement('div', {
-          style: {
-            background: '#fff3cd',
-            border: '2px solid #ffc107',
-            borderRadius: '8px',
-            padding: '16px',
-            margin: '16px 0',
-            textAlign: 'center'
-          }
-        }, [
-          React.createElement('p', { style: { margin: '0 0 12px 0', fontWeight: 'bold' } }, '🔊 Audio aktivieren'),
-          React.createElement('p', { style: { margin: '0 0 12px 0', fontSize: '14px' } }, 'Klicken Sie auf den Button, um Soundbenachrichtigungen zu aktivieren.'),
-          React.createElement('button', {
-            onClick: handleEnableAudio,
-            style: {
-              background: '#93c01f',
-              color: 'white',
-              border: 'none',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontSize: '16px',
-              fontWeight: 'bold',
-              cursor: 'pointer'
-            }
-          }, '🔊 Audio aktivieren')
+        React.createElement('h1', { style: { display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' } }, [
+          'Speditions Scanner',
+          React.createElement('span', {
+            style: { fontSize: '20px', opacity: audioReady ? 1 : 0.3 },
+            title: audioReady ? 'Audio aktiviert' : 'Audio wird beim ersten Klick aktiviert'
+          }, audioReady ? '🔊' : '🔇')
         ]),
-        audioReady && React.createElement('div', {
-          style: {
-            background: '#d4edda',
-            border: '1px solid #c3e6cb',
-            borderRadius: '8px',
-            padding: '12px',
-            margin: '16px 0',
-            textAlign: 'center',
-            color: '#155724'
-          }
-        }, '✅ Audio aktiviert'),
         error && React.createElement('div', { className: 'error' }, error),
         React.createElement('div', null, [React.createElement('label', null, 'CSV-Datei hochladen'), React.createElement('input', { type: 'file', accept: '.csv', onChange: handleFileUpload, className: 'file-input' })]),
         React.createElement('div', null, [React.createElement('label', null, uploadedFileName.toLowerCase().includes('geis') ? 'Geis Barcode scannen' : 'Barcode scannen'), React.createElement('input', { type: 'text', value: scanInput, onChange: (e) => setScanInput(e.target.value), onKeyDown: handleScanInput, ref: inputRef, placeholder: scanMode === 'package' ? 'Paketnummer scannen' : (uploadedFileName.toLowerCase().includes('geis') ? 'Geis Barcode scannen' : 'Barcode scannen'), className: 'scan-input' }), renderCurrentScan()]),
