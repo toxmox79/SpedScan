@@ -136,91 +136,114 @@
     const { createRoot } = ReactDOM;
     const root = createRoot(document.getElementById('root'));
 
-    const sounds = {
-      positive: new Audio('sounds/positive.mp3'),
-      negative: new Audio('sounds/negative.mp3'),
-      confirm: new Audio('sounds/confirm.mp3'),
+    // Web Audio API für bessere Android-Kompatibilität
+    // Web Audio API für bessere Android-Kompatibilität
+    let audioContext = null;
+    let audioBuffers = {};
+    let audioEnabled = false;
+    let useFallbackAudio = false;
+    let fallbackSounds = {};
+
+    const soundFiles = {
+      positive: 'sounds/positive.mp3',
+      negative: 'sounds/negative.mp3',
+      confirm: 'sounds/confirm.mp3'
     };
 
-    // Konfiguriere Audio-Objekte für bessere Android-Kompatibilität
-    Object.values(sounds).forEach(a => {
+    // Initialisiere AudioContext (muss durch User-Interaktion ausgelöst werden)
+    async function initAudio() {
+      if (audioEnabled) return true;
+
       try {
-        a.preload = 'auto';
-        a.volume = 1.0;
-        a.load();
-      } catch (e) {
-        console.warn('Audio preload error:', e);
-      }
-    });
+        // Versuch 1: Web Audio API
+        audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-    let audioUnlocked = false;
-    let unlockAttempts = 0;
-
-    function unlockAudioOnce() {
-      if (audioUnlocked) return;
-      unlockAttempts++;
-      console.log('Attempting to unlock audio, attempt:', unlockAttempts);
-
-      const unlockPromises = Object.values(sounds).map(a => {
-        return new Promise((resolve) => {
-          try {
-            a.muted = true;
-            a.volume = 0;
-            const p = a.play();
-            if (p && typeof p.then === 'function') {
-              p.then(() => {
-                a.pause();
-                a.currentTime = 0;
-                a.muted = false;
-                a.volume = 1.0;
-                console.log('Audio unlocked successfully');
-                resolve(true);
-              }).catch((err) => {
-                console.warn('Audio unlock failed:', err);
-                resolve(false);
-              });
-            } else {
-              a.pause();
-              a.currentTime = 0;
-              a.muted = false;
-              a.volume = 1.0;
-              resolve(true);
-            }
-          } catch (e) {
-            console.warn('Audio unlock exception:', e);
-            resolve(false);
-          }
-        });
-      });
-
-      Promise.all(unlockPromises).then((results) => {
-        if (results.some(r => r === true)) {
-          audioUnlocked = true;
-          console.log('Audio system unlocked');
+        if (audioContext.state === 'suspended') {
+          await audioContext.resume();
         }
-      });
+
+        const loadPromises = Object.entries(soundFiles).map(async ([name, url]) => {
+          const response = await fetch(url);
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          const arrayBuffer = await response.arrayBuffer();
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+          audioBuffers[name] = audioBuffer;
+          return true;
+        });
+
+        await Promise.all(loadPromises);
+        audioEnabled = true;
+        useFallbackAudio = false;
+        console.log('Web Audio API initialized successfully');
+        return true;
+
+      } catch (error) {
+        console.warn('Web Audio API initialization failed, falling back to HTML5 Audio:', error);
+
+        // Versuch 2: Fallback auf HTML5 Audio (für file:// Protokoll oder wenn fetch fehlschlägt)
+        try {
+          const warmupPromises = Object.entries(soundFiles).map(async ([name, url]) => {
+            const audio = new Audio(url);
+            audio.preload = 'auto';
+            audio.volume = 1.0;
+            fallbackSounds[name] = audio;
+
+            // Warmup/Unlock: Kurz anspielen während der User-Interaktion
+            try {
+              audio.muted = true;
+              await audio.play();
+              audio.pause();
+              audio.currentTime = 0;
+              audio.muted = false;
+            } catch (e) {
+              console.warn('Audio warmup failed for', name, e);
+            }
+            return true;
+          });
+
+          await Promise.all(warmupPromises);
+
+          audioEnabled = true;
+          useFallbackAudio = true;
+          console.log('HTML5 Audio fallback initialized successfully');
+          return true;
+        } catch (fallbackError) {
+          console.error('HTML5 Audio fallback failed:', fallbackError);
+          return false;
+        }
+      }
     }
 
+    // Audio abspielen
     function playSound(name) {
-      const a = sounds[name];
-      if (!a) return;
+      if (!audioEnabled) return;
 
-      try {
-        a.currentTime = 0;
-        a.volume = 1.0;
-        const playPromise = a.play();
-
-        if (playPromise && typeof playPromise.then === 'function') {
-          playPromise.catch((error) => {
-            console.warn('Audio play error for', name, ':', error);
-            // Versuche Audio-Unlock erneut bei Fehler
-            if (!audioUnlocked) {
-              unlockAudioOnce();
-            }
-          });
+      if (useFallbackAudio) {
+        // Fallback: HTML5 Audio
+        const sound = fallbackSounds[name];
+        if (sound) {
+          try {
+            sound.currentTime = 0;
+            sound.play().catch(e => console.warn('HTML5 Audio play error:', e));
+          } catch (e) {
+            console.warn('HTML5 Audio error:', e);
+          }
         }
-      } catch (e) {
-        console.warn('Audio play exception for', name, ':', e);
+      } else {
+        // Web Audio API
+        if (!audioContext || !audioBuffers[name]) return;
+
+        try {
+          const source = audioContext.createBufferSource();
+          source.buffer = audioBuffers[name];
+          const gainNode = audioContext.createGain();
+          gainNode.gain.value = 1.0;
+          source.connect(gainNode);
+          gainNode.connect(audioContext.destination);
+          source.start(0);
+        } catch (error) {
+          console.error(`Web Audio API play error for ${name}:`, error);
+        }
       }
     }
 
@@ -248,7 +271,18 @@
       const [error, setError] = React.useState(null);
       const [scanInput, setScanInput] = React.useState('');
       const [uploadedFileName, setUploadedFileName] = React.useState('');
+      const [audioReady, setAudioReady] = React.useState(false);
       const inputRef = React.useRef(null);
+
+      const handleEnableAudio = async () => {
+        const success = await initAudio();
+        if (success) {
+          setAudioReady(true);
+          setError(null);
+        } else {
+          setError('Audio konnte nicht aktiviert werden. Bitte versuchen Sie es erneut.');
+        }
+      };
 
       const handleFileUpload = (event) => {
         const file = event.target.files[0];
@@ -426,6 +460,43 @@
 
       return React.createElement('div', null, [
         React.createElement('h1', null, 'Speditions Scanner'),
+        !audioReady && React.createElement('div', {
+          style: {
+            background: '#fff3cd',
+            border: '2px solid #ffc107',
+            borderRadius: '8px',
+            padding: '16px',
+            margin: '16px 0',
+            textAlign: 'center'
+          }
+        }, [
+          React.createElement('p', { style: { margin: '0 0 12px 0', fontWeight: 'bold' } }, '🔊 Audio aktivieren'),
+          React.createElement('p', { style: { margin: '0 0 12px 0', fontSize: '14px' } }, 'Klicken Sie auf den Button, um Soundbenachrichtigungen zu aktivieren.'),
+          React.createElement('button', {
+            onClick: handleEnableAudio,
+            style: {
+              background: '#93c01f',
+              color: 'white',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: '8px',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer'
+            }
+          }, '🔊 Audio aktivieren')
+        ]),
+        audioReady && React.createElement('div', {
+          style: {
+            background: '#d4edda',
+            border: '1px solid #c3e6cb',
+            borderRadius: '8px',
+            padding: '12px',
+            margin: '16px 0',
+            textAlign: 'center',
+            color: '#155724'
+          }
+        }, '✅ Audio aktiviert'),
         error && React.createElement('div', { className: 'error' }, error),
         React.createElement('div', null, [React.createElement('label', null, 'CSV-Datei hochladen'), React.createElement('input', { type: 'file', accept: '.csv', onChange: handleFileUpload, className: 'file-input' })]),
         React.createElement('div', null, [React.createElement('label', null, uploadedFileName.toLowerCase().includes('geis') ? 'Geis Barcode scannen' : 'Barcode scannen'), React.createElement('input', { type: 'text', value: scanInput, onChange: (e) => setScanInput(e.target.value), onKeyDown: handleScanInput, ref: inputRef, placeholder: scanMode === 'package' ? 'Paketnummer scannen' : (uploadedFileName.toLowerCase().includes('geis') ? 'Geis Barcode scannen' : 'Barcode scannen'), className: 'scan-input' }), renderCurrentScan()]),
@@ -434,16 +505,6 @@
     }
 
     root.render(React.createElement(App));
-
-    // Mehrere Event-Listener für verschiedene Geräte und Interaktionstypen
-    window.addEventListener('touchstart', unlockAudioOnce, { once: true });
-    window.addEventListener('touchend', unlockAudioOnce, { once: true });
-    window.addEventListener('click', unlockAudioOnce, { once: true });
-    window.addEventListener('pointerdown', unlockAudioOnce, { once: true });
-    window.addEventListener('keydown', unlockAudioOnce, { once: true });
-
-    // Zusätzlicher Unlock-Versuch beim ersten Input-Focus
-    document.addEventListener('focusin', unlockAudioOnce, { once: true });
 
     // Register Service Worker for PWA
     if ('serviceWorker' in navigator) {
