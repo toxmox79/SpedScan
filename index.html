@@ -450,26 +450,67 @@
         ]);
       };
 
-      const renderCurrentScan = () => {
+       const renderCurrentScan = () => {
         if (!currentScan) {
-          return React.createElement('p', { className: 'scan-status' }, ['Scannen Sie eine ', React.createElement('span', { className: 'accent' }, 'Paketnummer')]);
+          return React.createElement(
+            'p',
+            { className: 'scan-status' },
+            [
+              'Scannen Sie eine ',
+              React.createElement('span', { className: 'accent' }, 'Paketnummer'),
+            ]
+          );
         }
+
         const barcodeList = Object.entries(currentScan.byBarcode)
           .sort((a, b) => a[0].localeCompare(b[0]))
-          .map(([ean, count]) => React.createElement('li', { key: ean }, `${ean || 'N/A'} – noch ${count}`));
+          .map(([ean, count]) =>
+            React.createElement('li', { key: ean }, `${ean || 'N/A'} – noch ${count}`)
+          );
+
         const itemLines = currentScan.items.map((it, idx) =>
-          React.createElement('li', { key: idx }, `${it.itemName} (${it.expectedBarcode || 'N/A'}): ${it.qtyRequired - it.qtyRemaining}/${it.qtyRequired} gescannt`)
+          React.createElement(
+            'li',
+            { key: idx },
+            `${it.itemName} (${it.expectedBarcode || 'N/A'}): ${it.qtyRequired - it.qtyRemaining}/${it.qtyRequired} gescannt`
+          )
         );
+
+        // NEU: Empfängername aus dem ersten Eintrag
+        const recipientName =
+          currentScan.items && currentScan.items.length > 0
+            ? currentScan.items[0].name
+            : 'N/A';
+
         return React.createElement('div', { className: 'status-panel' }, [
           React.createElement('div', { className: 'scan-status' }, [
-            React.createElement('p', null, ['Gescannte Paketnummer: ', React.createElement('span', { className: 'accent' }, currentScan.packageNumber)]),
-            React.createElement('p', null, `Gesamt noch: ${currentScan.totalRemaining} von ${currentScan.totalRequired}`),
+            React.createElement('p', null, [
+              'Gescannte Paketnummer: ',
+              React.createElement('span', { className: 'accent' }, currentScan.packageNumber),
+            ]),
+            React.createElement('p', null, [
+              'Empfänger: ',
+              React.createElement('span', { className: 'accent' }, recipientName),
+            ]),
+            React.createElement(
+              'p',
+              null,
+              `Gesamt noch: ${currentScan.totalRemaining} von ${currentScan.totalRequired}`
+            ),
             React.createElement('p', null, 'Benötigte EANs:'),
             React.createElement('ul', null, barcodeList),
             React.createElement('p', null, 'Positionen:'),
             React.createElement('ul', null, itemLines),
-            React.createElement('p', { className: 'mt-2' }, ['Bitte scannen Sie die ', React.createElement('span', { className: 'accent' }, 'zugehörigen EANs'), ' der Positionen.'])
-          ])
+            React.createElement(
+              'p',
+              { className: 'mt-2' },
+              [
+                'Bitte scannen Sie die ',
+                React.createElement('span', { className: 'accent' }, 'zugehörigen EANs'),
+                ' der Positionen.',
+              ]
+            ),
+          ]),
         ]);
       };
 
